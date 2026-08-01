@@ -7,14 +7,27 @@
  * istnieje od pierwszego commita, a nie „kiedyś, jak będzie trzeba".
  */
 import type {
+  Athlete,
+  AthleteCheck,
+  AthleteDraft,
+  AthletePatch,
   Channel,
   ChannelDraft,
   ChannelPatch,
+  Contest,
+  ContestDraft,
+  ContestPatch,
   HealthCheck,
+  Idea,
+  IdeaDraft,
+  IdeaPatch,
   PostType,
   Publication,
   PublicationDraft,
   PublicationPatch,
+  SportEvent,
+  SportEventDraft,
+  SportEventPatch,
 } from '@/domain/models'
 
 /** Strona wyników z całkowitą liczbą — do paginacji list. */
@@ -64,8 +77,48 @@ export type PublicationRepo = {
    * niczego jeszcze nie odtrąbił.
    */
   lastPublishedPerChannel(since: string): Promise<Map<string, string>>
+  /**
+   * Wszystkie publikacje powiązane z jakimkolwiek eventem lub konkursem.
+   * Bez ograniczenia datą — nagłośnienie liczymy dla eventu, nie dla okna
+   * kalendarza, a wpisów z powiązaniem jest z natury mało.
+   */
+  listLinked(): Promise<Publication[]>
   create(draft: PublicationDraft): Promise<Publication>
   update(id: string, patch: PublicationPatch): Promise<Publication>
+  remove(id: string): Promise<void>
+}
+
+export type EventRepo = {
+  list(): Promise<SportEvent[]>
+  create(draft: SportEventDraft): Promise<SportEvent>
+  update(id: string, patch: SportEventPatch): Promise<SportEvent>
+  remove(id: string): Promise<void>
+}
+
+export type ContestRepo = {
+  list(): Promise<Contest[]>
+  create(draft: ContestDraft): Promise<Contest>
+  update(id: string, patch: ContestPatch): Promise<Contest>
+  remove(id: string): Promise<void>
+}
+
+export type AthleteRepo = {
+  list(): Promise<Athlete[]>
+  create(draft: AthleteDraft): Promise<Athlete>
+  update(id: string, patch: AthletePatch): Promise<Athlete>
+  remove(id: string): Promise<void>
+  /** Ostatni przegląd per zawodnik — pod sygnał „dawno niesprawdzony". */
+  lastCheckPerAthlete(): Promise<Map<string, string>>
+  /** Historia przeglądów jednego zawodnika, od najnowszego. */
+  listChecks(athleteId: string): Promise<AthleteCheck[]>
+  addCheck(athleteId: string, checkedOn: string, note: string): Promise<AthleteCheck>
+  removeCheck(id: string): Promise<void>
+}
+
+export type IdeaRepo = {
+  list(): Promise<Idea[]>
+  create(draft: IdeaDraft): Promise<Idea>
+  update(id: string, patch: IdeaPatch): Promise<Idea>
   remove(id: string): Promise<void>
 }
 
@@ -78,4 +131,8 @@ export type DataProvider = {
   channels: ChannelRepo
   postTypes: PostTypeRepo
   publications: PublicationRepo
+  events: EventRepo
+  contests: ContestRepo
+  athletes: AthleteRepo
+  ideas: IdeaRepo
 }

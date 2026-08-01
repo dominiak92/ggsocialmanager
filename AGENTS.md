@@ -13,19 +13,18 @@ w którym widać: co i gdzie poszło, co jeszcze nie poszło, i co zaraz umknie.
 
 ## Stan projektu — przeczytaj najpierw
 
-Zrobione: **kroki 1–2** — kanały, rodzaje postów, publikacje i kalendarz
-(widok tygodnia + miesiąca). Reszta planu:
+Zrobione: **kroki 1–7** — cały zakres funkcjonalny poza szlifami. Reszta planu:
 
-| #   | Krok                                                        | Status                                  |
-| --- | ----------------------------------------------------------- | --------------------------------------- |
-| 1   | Kanały, rodzaje postów, publikacje                          | gotowe                                  |
-| 2   | Kalendarz: tydzień (siatka pokrycia) + miesiąc + panel dnia | gotowe                                  |
-| 3   | Eventy (zawody, gale MMA, campy) + wskaźnik nagłośnienia    | do zrobienia                            |
-| 4   | Konkursy: pipeline do zamknięcia, zwycięzca, adres wysyłki  | do zrobienia                            |
-| 5   | Zawodnicy sponsorowani + log przeglądów profili             | do zrobienia                            |
-| 6   | Pomysły i „do przegadania"                                  | do zrobienia                            |
-| 7   | Pulpit z **wyliczanymi** przypomnieniami                    | częściowo — działa sygnał „cichy kanał" |
-| 8   | Filtry, szybkie dodawanie, szlify mobilne                   | do zrobienia                            |
+| #   | Krok                                                        | Status       |
+| --- | ----------------------------------------------------------- | ------------ |
+| 1   | Kanały, rodzaje postów, publikacje                          | gotowe       |
+| 2   | Kalendarz: tydzień (siatka pokrycia) + miesiąc + panel dnia | gotowe       |
+| 3   | Eventy (zawody, gale MMA, campy) + wskaźnik nagłośnienia    | gotowe       |
+| 4   | Konkursy: pipeline do zamknięcia, zwycięzca, adres wysyłki  | gotowe       |
+| 5   | Zawodnicy sponsorowani + log przeglądów profili             | gotowe       |
+| 6   | Pomysły i „do przegadania"                                  | gotowe       |
+| 7   | Pulpit z **wyliczanymi** przypomnieniami                    | gotowe       |
+| 8   | Filtry, szybkie dodawanie, szlify mobilne                   | do zrobienia |
 
 **Przypomnienia mają być wyliczane z danych, nie wpisywane ręcznie.** Lista,
 o której trzeba pamiętać, żeby ją uzupełnić, nie chroni przed zapomnieniem.
@@ -242,9 +241,25 @@ z Git Basha, nie z PowerShella.
   raportowania wstecz. Domyślny status zależy od daty (dziś/wstecz →
   `published`, przyszłość → `planned`).
 - **„Event" i „konkurs" są jednocześnie rodzajem postu i osobnym bytem** — to
-  celowe. Rodzaj opisuje treść publikacji, a osobne tabele (kroki 3–4) trzymają
-  samo wydarzenie. Publikacja będzie mogła wskazać konkretny event/konkurs, co
-  pozwoli policzyć, na ilu kanałach coś zostało nagłośnione.
+  celowe. Rodzaj opisuje treść publikacji, a osobne tabele trzymają samo
+  wydarzenie. Publikacja wskazuje konkretny event/konkurs przez `event_id` /
+  `contest_id` (`on delete set null`, nie `cascade` — skasowanie eventu nie może
+  zabierać historii tego, co realnie poszło na kanały).
+- **Event** (`events`) — zawody, gala MMA, camp. **Nie ma pola „nagłośniony"**;
+  pokrycie liczy `eventPromo` z powiązanych publikacji. Osobna kolumna byłaby
+  kolejnym polem do ręcznego odhaczania i rozjechałaby się z rzeczywistością.
+  `promo_lead_days` mówi, ile dni przed startem pulpit ma się upominać.
+- **Konkurs** (`contests`) — etapy `running → picking → picked → sent`.
+  `picking` („minął termin, trzeba rozstrzygnąć") jest **osobnym, jawnym
+  etapem**, bo to tam najczęściej coś umyka: sam upływ daty niczego nie zamyka.
+  Statusu nie wyliczamy z dat — „rozstrzygnięty" i „wysłane" to decyzje
+  człowieka. **`winner_address` to dane osobowe** (patrz „Dostęp do danych").
+- **Zawodnik** (`athletes`) + **log przeglądów** (`athlete_checks`). Przegląd
+  jest LOGIEM, nie kolumną „ostatnio sprawdzony": kolumna gubiłaby historię
+  i nie dałoby się odróżnić kogoś zaniedbywanego od miesięcy od odwiedzonego
+  wczoraj po długiej przerwie. `check_every_days` to rytm per zawodnik.
+- **Pomysły** (`ideas`) — `kind` rozdziela pomysł od tematu „do przegadania",
+  `status` i `priority` porządkują listę.
 
 **Daty to daty, nie momenty.** `publish_on` jest typu `date`, a klucz dnia
 w kodzie składa `toDateKey()` z lokalnych komponentów. **Nigdy nie używaj
@@ -299,11 +314,46 @@ supabase/migrations/    # zmiany schematu `ggsm` (nigdy `public`)
 
 ## Trasy
 
-| Ścieżka       | Widok                                            |
-| ------------- | ------------------------------------------------ |
-| `/`           | Pulpit (docelowo przypomnienia — krok 7)         |
-| `/kalendarz`  | Siatka tygodnia / przegląd miesiąca / panel dnia |
-| `/ustawienia` | Włączanie i wyłączanie kanałów                   |
+| Ścieżka       | Widok                                                             |
+| ------------- | ----------------------------------------------------------------- |
+| `/`           | Pulpit — wszystkie wyliczane sygnały w czterech kartach           |
+| `/kalendarz`  | Siatka tygodnia / przegląd miesiąca / panel dnia                  |
+| `/eventy`     | Wydarzenia + wskaźnik „na ilu kanałach nagłośnione"               |
+| `/konkursy`   | Konkursy z etapami aż do wysłanej nagrody                         |
+| `/zawodnicy`  | Sponsorowani zawodnicy, zaniedbani na górze, odhaczanie przeglądu |
+| `/pomysly`    | Pomysły i tematy do przegadania                                   |
+| `/ustawienia` | Dodawanie, edycja i wyłączanie kanałów                            |
+
+## Sygnały na pulpicie
+
+Wszystkie liczy `domain/reminders.ts` (czyste funkcje, „dziś" wstrzykiwane
+argumentem — inaczej testy psułyby się o północy). Nowy sygnał dopisuj TAM,
+nie w komponencie.
+
+| Sygnał                  | Kiedy krzyczy                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------------- |
+| Event bez zapowiedzi    | start w oknie `promo_lead_days`, zero powiązanych publikacji                                        |
+| Konkurs do ruszenia     | kończy się ≤2 dni, minął termin przy statusie `running`, czeka na zwycięzcę albo na wysyłkę nagrody |
+| Cichy kanał             | dni od ostatniej publikacji > `reminder_after_days`                                                 |
+| Zawodnik do odwiedzenia | dni od ostatniego przeglądu > `check_every_days`                                                    |
+
+Trzy zasady wspólne dla wszystkich: liczymy **wyłącznie z wpisów `published`**
+(plan niczego jeszcze nie odtrąbił), sortujemy po **przekroczeniu progu**,
+nie po surowej liczbie dni (kanał 27 dni po swoim terminie jest pilniejszy niż
+taki 10 dni po, choćby ten drugi milczał dłużej), a konkurs dostaje **jeden,
+najpilniejszy powód**, nie wszystkie naraz — inaczej lista puchnie duplikatami.
+
+## Wspólne komponenty formularzy
+
+Nowe formularze buduj na `components/shared/entity-dialog.tsx`
+(`EntityDialog`) i `components/shared/field.tsx` (`TextField`, `NumberField`,
+`NoteField`, `Field`), a nie na gołym `DialogContent`. `EntityDialog` trzyma
+`max-h-[85dvh]` i przewija wyłącznie środek — bez tego okno rośnie i kurczy się
+przy zmianie treści, a przyciski uciekają spod kursora.
+
+Listy CRUD-owe idą przez `hooks/use-collection.ts` (`useCollection`) spięty
+w `hooks/use-domain.ts`. Cztery listy robiły dokładnie to samo, więc jest jeden
+hook sparametryzowany repozytorium — nie dopisuj piątej kopii.
 
 ## Deploy
 

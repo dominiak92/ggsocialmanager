@@ -5,8 +5,27 @@
  * wiersza wyżej — inaczej kształt bazy przecieka do UI i migracja na inną bazę
  * przestaje być zmianą jednego katalogu.
  */
-import type { Locale, Platform, PublicationStatus } from '@/domain/enums'
-import type { Channel, HealthCheck, PostType, Publication } from '@/domain/models'
+import type {
+  ContestStatus,
+  EventKind,
+  IdeaKind,
+  IdeaPriority,
+  IdeaStatus,
+  Locale,
+  Platform,
+  PublicationStatus,
+} from '@/domain/enums'
+import type {
+  Athlete,
+  AthleteCheck,
+  Channel,
+  Contest,
+  HealthCheck,
+  Idea,
+  PostType,
+  Publication,
+  SportEvent,
+} from '@/domain/models'
 import type { Database } from '@/lib/database.types'
 
 type Tables = Database['ggsm']['Tables']
@@ -55,5 +74,73 @@ export function toPublication(row: Tables['publications']['Row']): Publication {
     title: row.title,
     note: row.note,
     url: row.url,
+    eventId: row.event_id,
+    contestId: row.contest_id,
+  }
+}
+
+export function toSportEvent(row: Tables['events']['Row']): SportEvent {
+  return {
+    id: row.id,
+    name: row.name,
+    kind: row.kind as EventKind,
+    startsOn: row.starts_on,
+    endsOn: row.ends_on,
+    place: row.place,
+    isSponsored: row.is_sponsored,
+    url: row.url,
+    note: row.note,
+    promoLeadDays: row.promo_lead_days,
+  }
+}
+
+export function toContest(row: Tables['contests']['Row']): Contest {
+  return {
+    id: row.id,
+    name: row.name,
+    channelId: row.channel_id,
+    startsOn: row.starts_on,
+    endsOn: row.ends_on,
+    prize: row.prize,
+    status: row.status as ContestStatus,
+    winnerName: row.winner_name,
+    winnerContact: row.winner_contact,
+    winnerAddress: row.winner_address,
+    trackingCode: row.tracking_code,
+    url: row.url,
+    note: row.note,
+  }
+}
+
+export function toAthlete(row: Tables['athletes']['Row']): Athlete {
+  return {
+    id: row.id,
+    name: row.name,
+    discipline: row.discipline,
+    instagramUrl: row.instagram_url,
+    otherUrl: row.other_url,
+    checkEveryDays: row.check_every_days,
+    isActive: row.is_active,
+    note: row.note,
+  }
+}
+
+export function toAthleteCheck(row: Tables['athlete_checks']['Row']): AthleteCheck {
+  return {
+    id: row.id,
+    athleteId: row.athlete_id,
+    checkedOn: row.checked_on,
+    note: row.note,
+  }
+}
+
+export function toIdea(row: Tables['ideas']['Row']): Idea {
+  return {
+    id: row.id,
+    title: row.title,
+    detail: row.detail,
+    kind: row.kind as IdeaKind,
+    status: row.status as IdeaStatus,
+    priority: row.priority as IdeaPriority,
   }
 }

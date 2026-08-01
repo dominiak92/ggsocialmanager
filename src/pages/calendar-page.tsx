@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { postTypeColorClass } from '@/domain/enums'
 import { useChannels } from '@/hooks/use-channels'
+import { useContests, useEvents } from '@/hooks/use-domain'
 import { usePostTypes } from '@/hooks/use-post-types'
 import { usePublications } from '@/hooks/use-publications'
 import {
@@ -34,6 +35,10 @@ export function CalendarPage() {
 
   const { channels, loading: channelsLoading } = useChannels()
   const { postTypes } = usePostTypes()
+  // Potrzebne tylko po to, by wpis dało się powiązać z eventem/konkursem —
+  // z tego powiązania liczy się potem wskaźnik nagłośnienia.
+  const { items: events } = useEvents()
+  const { items: contests } = useContests()
 
   // Zakres pobierania zależy od widoku. Liczymy go raz — hook publikacji
   // przeładowuje dane, gdy zmienią się granice, więc niestabilne referencje
@@ -178,6 +183,8 @@ export function CalendarPage() {
         target={target}
         channels={activeChannels}
         postTypes={postTypes}
+        events={events}
+        contests={contests}
         onClose={() => setTarget(null)}
         onCreate={create}
         onUpdate={update}

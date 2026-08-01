@@ -1,4 +1,12 @@
-import { CalendarDaysIcon, LayoutDashboardIcon, SettingsIcon } from 'lucide-react'
+import {
+  CalendarDaysIcon,
+  GiftIcon,
+  LayoutDashboardIcon,
+  LightbulbIcon,
+  MegaphoneIcon,
+  SettingsIcon,
+  UsersIcon,
+} from 'lucide-react'
 import type { ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router'
 
@@ -15,6 +23,10 @@ import { cn } from '@/lib/utils'
 const NAV = [
   { to: '/', label: 'Pulpit', icon: LayoutDashboardIcon },
   { to: '/kalendarz', label: 'Kalendarz', icon: CalendarDaysIcon },
+  { to: '/eventy', label: 'Eventy', icon: MegaphoneIcon },
+  { to: '/konkursy', label: 'Konkursy', icon: GiftIcon },
+  { to: '/zawodnicy', label: 'Zawodnicy', icon: UsersIcon },
+  { to: '/pomysly', label: 'Pomysły', icon: LightbulbIcon },
   { to: '/ustawienia', label: 'Ustawienia', icon: SettingsIcon },
 ]
 

@@ -5,7 +5,16 @@
  * migrację na inną bazę: zmienia się implementacja repozytoriów, nie te typy.
  * Patrz AGENTS.md → „Warstwa danych".
  */
-import type { Locale, Platform, PublicationStatus } from '@/domain/enums'
+import type {
+  ContestStatus,
+  EventKind,
+  IdeaKind,
+  IdeaPriority,
+  IdeaStatus,
+  Locale,
+  Platform,
+  PublicationStatus,
+} from '@/domain/enums'
 
 /** Wynik sondy połączenia z bazą — pokazywany na pulpicie. */
 export type HealthCheck = {
@@ -85,7 +94,94 @@ export type Publication = {
   title: string
   note: string
   url: string
+  /** Powiązanie z wydarzeniem — z tego liczy się pokrycie nagłośnienia. */
+  eventId: string | null
+  contestId: string | null
 }
+
+/**
+ * Wydarzenie sportowe: zawody, gala MMA, camp.
+ *
+ * Nie ma tu pola „nagłośniony" — to wynika z powiązanych publikacji.
+ * Osobna kolumna byłaby kolejnym polem do ręcznego odhaczania i szybko
+ * rozjechałaby się z rzeczywistością.
+ */
+export type SportEvent = {
+  id: string
+  name: string
+  kind: EventKind
+  startsOn: string
+  /** `null` = wydarzenie jednodniowe. */
+  endsOn: string | null
+  place: string
+  isSponsored: boolean
+  url: string
+  note: string
+  /** Ile dni przed startem zacząć się upominać o brak nagłośnienia. */
+  promoLeadDays: number
+}
+
+export type SportEventDraft = Omit<SportEvent, 'id'>
+export type SportEventPatch = Partial<SportEventDraft>
+
+/** Konkurs na fanpage'u — z terminem, który trzeba domknąć. */
+export type Contest = {
+  id: string
+  name: string
+  /** `null`, gdy konkurs obejmuje kilka kanałów. */
+  channelId: string | null
+  startsOn: string
+  endsOn: string
+  prize: string
+  status: ContestStatus
+  winnerName: string
+  winnerContact: string
+  /** DANE OSOBOWE — przy obecnej polityce RLS publicznie czytelne. */
+  winnerAddress: string
+  trackingCode: string
+  url: string
+  note: string
+}
+
+export type ContestDraft = Omit<Contest, 'id'>
+export type ContestPatch = Partial<ContestDraft>
+
+/** Sponsorowany zawodnik, którego profil trzeba regularnie przeglądać. */
+export type Athlete = {
+  id: string
+  name: string
+  discipline: string
+  instagramUrl: string
+  otherUrl: string
+  /** Co ile dni profil ma być przejrzany. `0` = nie przypominaj. */
+  checkEveryDays: number
+  isActive: boolean
+  note: string
+}
+
+export type AthleteDraft = Omit<Athlete, 'id'>
+export type AthletePatch = Partial<AthleteDraft>
+
+/** Wpis w logu przeglądów profilu zawodnika. */
+export type AthleteCheck = {
+  id: string
+  athleteId: string
+  checkedOn: string
+  note: string
+}
+
+/** Pomysł albo temat do przegadania. */
+export type Idea = {
+  id: string
+  title: string
+  detail: string
+  kind: IdeaKind
+  status: IdeaStatus
+  priority: IdeaPriority
+}
+
+export type IdeaDraft = Omit<Idea, 'id'>
+export type IdeaPatch = Partial<IdeaDraft>
 
 /** Dane do utworzenia wpisu; resztę pól uzupełnia baza. */
 export type PublicationDraft = {
@@ -96,6 +192,8 @@ export type PublicationDraft = {
   title?: string
   note?: string
   url?: string
+  eventId?: string | null
+  contestId?: string | null
 }
 
 /** Zmiana istniejącego wpisu — wszystkie pola opcjonalne. */

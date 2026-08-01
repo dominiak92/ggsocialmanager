@@ -5,8 +5,11 @@
  * zapomnieniem. Tutaj żyje czysta logika sygnałów — bez I/O i bez Reacta,
  * dzięki czemu da się ją przetestować i użyć zarówno na pulpicie, jak
  * i w innych widokach.
+ *
+ * Każda funkcja przyjmuje „dziś" jako argument — inaczej testy zależałyby
+ * od zegara maszyny i psuły się o północy.
  */
-import type { Channel } from '@/domain/models'
+import type { Athlete, Channel, Contest, Publication, SportEvent } from '@/domain/models'
 import { daysBetween, fromDateKey } from '@/lib/dates'
 
 export type SilentChannel = {
@@ -25,9 +28,6 @@ export type SilentChannel = {
  * Kanał bez ani jednej publikacji w badanym oknie traktujemy jako
  * przekroczony maksymalnie — to najczęściej kanał, o którym się zapomniało,
  * a nie taki, który świadomie odpoczywa.
- *
- * @param lastPublished mapa `channelId` → data ostatniej publikacji
- * @param today dzień odniesienia (wstrzykiwany, żeby dało się to testować)
  */
 export function silentChannels(
   channels: Channel[],
@@ -53,5 +53,137 @@ export function silentChannels(
       // „Nigdy nic nie poszło" na samą górę, potem wg przekroczenia progu.
       if (a.overdueBy !== b.overdueBy) return b.overdueBy - a.overdueBy
       return a.channel.sortOrder - b.channel.sortOrder
+    })
+}
+
+export type EventPromo = {
+  event: SportEvent
+  /** Dni do startu; ujemne = event już się zaczął. */
+  daysUntil: number
+  /** Ile publikacji wskazuje na ten event. */
+  promoCount: number
+  /** Na ilu różnych kanałach był nagłaśniany. */
+  channelCount: number
+}
+
+/** Pokrycie nagłośnienia dla wszystkich eventów — także tych zaopiekowanych. */
+export function eventPromo(
+  events: SportEvent[],
+  publications: Publication[],
+  today: Date,
+): EventPromo[] {
+  return events.map((event) => {
+    const linked = publications.filter((publication) => publication.eventId === event.id)
+
+    return {
+      event,
+      daysUntil: daysBetween(today, fromDateKey(event.startsOn)),
+      promoCount: linked.length,
+      channelCount: new Set(linked.map((publication) => publication.channelId)).size,
+    }
+  })
+}
+
+/**
+ * Eventy, które się zbliżają, a nie mają ANI JEDNEJ publikacji.
+ *
+ * To dokładnie ten sygnał, o który prosił właściciel: „żeby nie przegapić,
+ * że jakiś event nie zostanie nagłośniony". Event, który już minął, znika
+ * z listy — na przypominanie jest za późno, a lista ma pozostać krótka.
+ */
+export function eventsNeedingPromo(
+  events: SportEvent[],
+  publications: Publication[],
+  today: Date,
+): EventPromo[] {
+  return eventPromo(events, publications, today)
+    .filter(
+      (entry) =>
+        entry.promoCount === 0 &&
+        entry.daysUntil >= 0 &&
+        entry.daysUntil <= entry.event.promoLeadDays,
+    )
+    .toSorted((a, b) => a.daysUntil - b.daysUntil)
+}
+
+export type ContestAlertReason = 'ends-soon' | 'overdue' | 'winner-waiting' | 'prize-waiting'
+
+export type ContestAlert = {
+  contest: Contest
+  reason: ContestAlertReason
+  /** Dni do końca (dodatnie) albo od końca (ujemne). */
+  daysUntilEnd: number
+}
+
+export const CONTEST_ALERT_LABEL: Record<ContestAlertReason, string> = {
+  'ends-soon': 'Kończy się lada moment',
+  overdue: 'Termin minął, konkurs wciąż otwarty',
+  'winner-waiting': 'Czeka na wyłonienie zwycięzcy',
+  'prize-waiting': 'Nagroda niewysłana',
+}
+
+/** Po ilu dniach przed końcem konkurs zaczyna się upominać. */
+const CONTEST_ENDING_SOON_DAYS = 2
+
+/**
+ * Konkursy wymagające ruchu. Kolejność sprawdzania ma znaczenie — zwracamy
+ * NAJPILNIEJSZY powód, a nie wszystkie naraz, żeby lista nie puchła
+ * duplikatami tego samego konkursu.
+ */
+export function contestsNeedingAction(contests: Contest[], today: Date): ContestAlert[] {
+  const alerts: ContestAlert[] = []
+
+  for (const contest of contests) {
+    if (contest.status === 'sent') continue
+
+    const daysUntilEnd = daysBetween(today, fromDateKey(contest.endsOn))
+
+    if (contest.status === 'picked') {
+      alerts.push({ contest, reason: 'prize-waiting', daysUntilEnd })
+    } else if (contest.status === 'picking') {
+      alerts.push({ contest, reason: 'winner-waiting', daysUntilEnd })
+    } else if (daysUntilEnd < 0) {
+      // Termin minął, a status wciąż „trwa" — klasyczne przeoczenie.
+      alerts.push({ contest, reason: 'overdue', daysUntilEnd })
+    } else if (daysUntilEnd <= CONTEST_ENDING_SOON_DAYS) {
+      alerts.push({ contest, reason: 'ends-soon', daysUntilEnd })
+    }
+  }
+
+  // Najbardziej przeterminowane na górze.
+  return alerts.toSorted((a, b) => a.daysUntilEnd - b.daysUntilEnd)
+}
+
+export type AthleteDue = {
+  athlete: Athlete
+  lastCheckedOn: string | null
+  daysSince: number | null
+  overdueBy: number
+}
+
+/** Zawodnicy, których profil nie był przeglądany dłużej niż ich rytm. */
+export function athletesDue(
+  athletes: Athlete[],
+  lastChecks: Map<string, string>,
+  today: Date,
+): AthleteDue[] {
+  return athletes
+    .filter((athlete) => athlete.isActive && athlete.checkEveryDays > 0)
+    .map((athlete) => {
+      const lastCheckedOn = lastChecks.get(athlete.id) ?? null
+      const daysSince = lastCheckedOn ? daysBetween(fromDateKey(lastCheckedOn), today) : null
+
+      return {
+        athlete,
+        lastCheckedOn,
+        daysSince,
+        overdueBy:
+          daysSince === null ? Number.POSITIVE_INFINITY : daysSince - athlete.checkEveryDays,
+      }
+    })
+    .filter((entry) => entry.overdueBy > 0)
+    .toSorted((a, b) => {
+      if (a.overdueBy !== b.overdueBy) return b.overdueBy - a.overdueBy
+      return a.athlete.name.localeCompare(b.athlete.name, 'pl')
     })
 }

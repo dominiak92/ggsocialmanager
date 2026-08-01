@@ -32,6 +32,77 @@ export type Database = {
         }
         Relationships: []
       }
+      athlete_checks: {
+        Row: {
+          athlete_id: string
+          checked_on: string
+          created_at: string
+          id: string
+          note: string
+        }
+        Insert: {
+          athlete_id: string
+          checked_on?: string
+          created_at?: string
+          id?: string
+          note?: string
+        }
+        Update: {
+          athlete_id?: string
+          checked_on?: string
+          created_at?: string
+          id?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_checks_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      athletes: {
+        Row: {
+          check_every_days: number
+          created_at: string
+          discipline: string
+          id: string
+          instagram_url: string
+          is_active: boolean
+          name: string
+          note: string
+          other_url: string
+          updated_at: string
+        }
+        Insert: {
+          check_every_days?: number
+          created_at?: string
+          discipline?: string
+          id?: string
+          instagram_url?: string
+          is_active?: boolean
+          name: string
+          note?: string
+          other_url?: string
+          updated_at?: string
+        }
+        Update: {
+          check_every_days?: number
+          created_at?: string
+          discipline?: string
+          id?: string
+          instagram_url?: string
+          is_active?: boolean
+          name?: string
+          note?: string
+          other_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       channels: {
         Row: {
           code: string
@@ -67,6 +138,146 @@ export type Database = {
           platform?: string
           reminder_after_days?: number
           sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      contests: {
+        Row: {
+          channel_id: string | null
+          created_at: string
+          ends_on: string
+          id: string
+          name: string
+          note: string
+          prize: string
+          starts_on: string
+          status: string
+          tracking_code: string
+          updated_at: string
+          url: string
+          winner_address: string
+          winner_contact: string
+          winner_name: string
+        }
+        Insert: {
+          channel_id?: string | null
+          created_at?: string
+          ends_on: string
+          id?: string
+          name: string
+          note?: string
+          prize?: string
+          starts_on: string
+          status?: string
+          tracking_code?: string
+          updated_at?: string
+          url?: string
+          winner_address?: string
+          winner_contact?: string
+          winner_name?: string
+        }
+        Update: {
+          channel_id?: string | null
+          created_at?: string
+          ends_on?: string
+          id?: string
+          name?: string
+          note?: string
+          prize?: string
+          starts_on?: string
+          status?: string
+          tracking_code?: string
+          updated_at?: string
+          url?: string
+          winner_address?: string
+          winner_contact?: string
+          winner_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contests_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          ends_on: string | null
+          id: string
+          is_sponsored: boolean
+          kind: string
+          name: string
+          note: string
+          place: string
+          promo_lead_days: number
+          starts_on: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          ends_on?: string | null
+          id?: string
+          is_sponsored?: boolean
+          kind?: string
+          name: string
+          note?: string
+          place?: string
+          promo_lead_days?: number
+          starts_on: string
+          updated_at?: string
+          url?: string
+        }
+        Update: {
+          created_at?: string
+          ends_on?: string | null
+          id?: string
+          is_sponsored?: boolean
+          kind?: string
+          name?: string
+          note?: string
+          place?: string
+          promo_lead_days?: number
+          starts_on?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      ideas: {
+        Row: {
+          created_at: string
+          detail: string
+          id: string
+          kind: string
+          priority: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string
+          id?: string
+          kind?: string
+          priority?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string
+          id?: string
+          kind?: string
+          priority?: string
+          status?: string
+          title?: string
           updated_at?: string
         }
         Relationships: []
@@ -107,7 +318,9 @@ export type Database = {
       publications: {
         Row: {
           channel_id: string
+          contest_id: string | null
           created_at: string
+          event_id: string | null
           id: string
           note: string
           post_type_id: string | null
@@ -119,7 +332,9 @@ export type Database = {
         }
         Insert: {
           channel_id: string
+          contest_id?: string | null
           created_at?: string
+          event_id?: string | null
           id?: string
           note?: string
           post_type_id?: string | null
@@ -131,7 +346,9 @@ export type Database = {
         }
         Update: {
           channel_id?: string
+          contest_id?: string | null
           created_at?: string
+          event_id?: string | null
           id?: string
           note?: string
           post_type_id?: string | null
@@ -147,6 +364,20 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publications_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publications_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
           {

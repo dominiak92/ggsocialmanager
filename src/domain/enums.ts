@@ -50,6 +50,64 @@ export function channelGroupOf(platform: Platform): ChannelGroup {
   return 'other'
 }
 
+export const EVENT_KINDS = ['zawody', 'gala', 'camp', 'seminarium', 'inne'] as const
+
+export type EventKind = (typeof EVENT_KINDS)[number]
+
+export const EVENT_KIND_LABEL: Record<EventKind, string> = {
+  zawody: 'Zawody',
+  gala: 'Gala MMA',
+  camp: 'Camp',
+  seminarium: 'Seminarium',
+  inne: 'Inne',
+}
+
+/**
+ * Etapy konkursu. `picking` (minął termin, trzeba rozstrzygnąć) jest osobnym
+ * etapem, bo to właśnie tu najczęściej coś umyka — sam upływ daty niczego
+ * nie zamyka.
+ */
+export const CONTEST_STATUSES = ['running', 'picking', 'picked', 'sent'] as const
+
+export type ContestStatus = (typeof CONTEST_STATUSES)[number]
+
+export const CONTEST_STATUS_LABEL: Record<ContestStatus, string> = {
+  running: 'Trwa',
+  picking: 'Do rozstrzygnięcia',
+  picked: 'Zwycięzca wybrany',
+  sent: 'Nagroda wysłana',
+}
+
+export const IDEA_KINDS = ['idea', 'discuss'] as const
+
+export type IdeaKind = (typeof IDEA_KINDS)[number]
+
+export const IDEA_KIND_LABEL: Record<IdeaKind, string> = {
+  idea: 'Pomysł',
+  discuss: 'Do przegadania',
+}
+
+export const IDEA_STATUSES = ['new', 'doing', 'done', 'dropped'] as const
+
+export type IdeaStatus = (typeof IDEA_STATUSES)[number]
+
+export const IDEA_STATUS_LABEL: Record<IdeaStatus, string> = {
+  new: 'Nowe',
+  doing: 'W toku',
+  done: 'Zrobione',
+  dropped: 'Odrzucone',
+}
+
+export const IDEA_PRIORITIES = ['low', 'normal', 'high'] as const
+
+export type IdeaPriority = (typeof IDEA_PRIORITIES)[number]
+
+export const IDEA_PRIORITY_LABEL: Record<IdeaPriority, string> = {
+  low: 'Niski',
+  normal: 'Zwykły',
+  high: 'Wysoki',
+}
+
 export const PUBLICATION_STATUSES = ['planned', 'published'] as const
 
 export type PublicationStatus = (typeof PUBLICATION_STATUSES)[number]

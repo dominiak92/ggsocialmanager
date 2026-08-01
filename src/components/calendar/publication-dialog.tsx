@@ -21,7 +21,14 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { postTypeColorClass, type PublicationStatus } from '@/domain/enums'
-import type { Channel, PostType, Publication, PublicationDraft } from '@/domain/models'
+import type {
+  Channel,
+  Contest,
+  PostType,
+  Publication,
+  PublicationDraft,
+  SportEvent,
+} from '@/domain/models'
 import { formatDayLong, fromDateKey, toDateKey } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 
@@ -37,11 +44,16 @@ type Props = {
   target: PublicationTarget | null
   channels: Channel[]
   postTypes: PostType[]
+  events: SportEvent[]
+  contests: Contest[]
   onClose: () => void
   onCreate: (draft: PublicationDraft) => Promise<unknown>
   onUpdate: (id: string, patch: Partial<Publication>) => Promise<unknown>
   onDelete: (id: string) => Promise<unknown>
 }
+
+/** `Select` nie umie wartości pustej — brak powiązania trzymamy tym tokenem. */
+const NONE = '__none__'
 
 type FormState = {
   channelId: string
@@ -51,6 +63,8 @@ type FormState = {
   title: string
   url: string
   note: string
+  eventId: string | null
+  contestId: string | null
 }
 
 /**
@@ -73,6 +87,8 @@ function initialForm(target: PublicationTarget): FormState {
       title: publication.title,
       url: publication.url,
       note: publication.note,
+      eventId: publication.eventId,
+      contestId: publication.contestId,
     }
   }
 
@@ -84,6 +100,8 @@ function initialForm(target: PublicationTarget): FormState {
     title: '',
     url: '',
     note: '',
+    eventId: null,
+    contestId: null,
   }
 }
 
@@ -91,6 +109,8 @@ export function PublicationDialog({
   target,
   channels,
   postTypes,
+  events,
+  contests,
   onClose,
   onCreate,
   onUpdate,
@@ -122,6 +142,8 @@ export function PublicationDialog({
           title: form.title.trim(),
           url: form.url.trim(),
           note: form.note.trim(),
+          eventId: form.eventId,
+          contestId: form.contestId,
         })
       } else {
         await onCreate({
@@ -132,6 +154,8 @@ export function PublicationDialog({
           title: form.title.trim(),
           url: form.url.trim(),
           note: form.note.trim(),
+          eventId: form.eventId,
+          contestId: form.contestId,
         })
       }
       onClose()
@@ -246,6 +270,52 @@ export function PublicationDialog({
               placeholder="https://..."
             />
           </div>
+
+          {/* Powiązanie z wydarzeniem — z tego liczy się wskaźnik nagłośnienia
+              na liście eventów i sygnał „event bez zapowiedzi" na pulpicie. */}
+          {events.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="event">Dotyczy eventu</Label>
+              <Select
+                value={form.eventId ?? NONE}
+                onValueChange={(value) => patch({ eventId: value === NONE ? null : value })}
+              >
+                <SelectTrigger id="event" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Bez powiązania</SelectItem>
+                  {events.map((event) => (
+                    <SelectItem key={event.id} value={event.id}>
+                      {event.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {contests.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="contest">Dotyczy konkursu</Label>
+              <Select
+                value={form.contestId ?? NONE}
+                onValueChange={(value) => patch({ contestId: value === NONE ? null : value })}
+              >
+                <SelectTrigger id="contest" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Bez powiązania</SelectItem>
+                  {contests.map((contest) => (
+                    <SelectItem key={contest.id} value={contest.id}>
+                      {contest.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="note">Notatka</Label>

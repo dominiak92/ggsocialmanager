@@ -1,96 +1,169 @@
-import { BellRingIcon, CheckCircle2Icon, VolumeXIcon } from 'lucide-react'
-import { Link } from 'react-router'
+import { BellRingIcon, GiftIcon, MegaphoneIcon, UsersIcon } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
+import { SignalCard, SignalRow } from '@/components/dashboard/signal-card'
+import { dataProvider } from '@/data/provider'
+import type { Publication } from '@/domain/models'
+import {
+  CONTEST_ALERT_LABEL,
+  athletesDue,
+  contestsNeedingAction,
+  eventsNeedingPromo,
+} from '@/domain/reminders'
 import { useChannels } from '@/hooks/use-channels'
+import { useAthletes, useContests, useEvents } from '@/hooks/use-domain'
 import { useSilentChannels } from '@/hooks/use-silent-channels'
 
 /**
- * Pulpit = przypomnienia. Sygnały są WYLICZANE z danych, nie wpisywane
- * ręcznie — lista, o której trzeba pamiętać, żeby ją uzupełnić, nie chroni
- * przed zapomnieniem.
+ * Pulpit = przypomnienia. WSZYSTKIE sygnały są wyliczane z danych, żaden nie
+ * jest osobną listą do uzupełniania — lista, o której trzeba pamiętać, żeby ją
+ * wypełnić, nie chroni przed zapomnieniem.
  *
- * Na razie jest tu jeden sygnał (cisza na kanale). Kolejne (eventy bez
- * nagłośnienia, konkursy do zamknięcia, zawodnicy bez przeglądu) dochodzą
- * w krokach 3–5.
+ * Logika sygnałów siedzi w `domain/reminders.ts` i ma testy; tutaj zostaje
+ * wyłącznie składanie danych i prezentacja.
  */
 export function DashboardPage() {
   const { channels, loading: channelsLoading } = useChannels()
-  const { silent, error, loading } = useSilentChannels(channels)
+  const { silent, loading: silenceLoading } = useSilentChannels(channels)
+  const { items: events, loading: eventsLoading } = useEvents()
+  const { items: contests, loading: contestsLoading } = useContests()
+  const { items: athletes, loading: athletesLoading } = useAthletes()
 
-  const busy = channelsLoading || loading
+  const [linked, setLinked] = useState<Publication[]>([])
+  const [lastChecks, setLastChecks] = useState<Map<string, string>>(new Map())
+
+  useEffect(() => {
+    dataProvider.publications
+      .listLinked()
+      .then(setLinked)
+      .catch(() => setLinked([]))
+    dataProvider.athletes
+      .lastCheckPerAthlete()
+      .then(setLastChecks)
+      .catch(() => setLastChecks(new Map()))
+  }, [])
+
+  // Jedno „dziś" na cały render — inaczej dwa sygnały mogłyby liczyć
+  // względem różnych chwil, gdyby render trafił w północ.
+  const today = useMemo(() => new Date(), [])
+
+  const eventAlerts = useMemo(
+    () => eventsNeedingPromo(events, linked, today),
+    [events, linked, today],
+  )
+  const contestAlerts = useMemo(() => contestsNeedingAction(contests, today), [contests, today])
+  const athleteAlerts = useMemo(
+    () => athletesDue(athletes, lastChecks, today),
+    [athletes, lastChecks, today],
+  )
+
+  const total = silent.length + eventAlerts.length + contestAlerts.length + athleteAlerts.length
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Pulpit</h1>
-        <p className="text-muted-foreground text-sm">Co się upomina i czego brakuje.</p>
+        <p className="text-muted-foreground text-sm">
+          {total === 0
+            ? 'Nic się nie upomina — wszystko na bieżąco.'
+            : `${total} ${total === 1 ? 'rzecz wymaga' : 'rzeczy wymaga'} uwagi.`}
+        </p>
       </div>
 
-      {error && (
-        <p className="border-destructive/40 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
-          {error}
-        </p>
-      )}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <SignalCard
+          title="Eventy bez zapowiedzi"
+          description="Zbliża się, a nie poszła o tym ani jedna publikacja."
+          icon={MegaphoneIcon}
+          to="/eventy"
+          count={eventAlerts.length}
+          loading={eventsLoading}
+          emptyText="Każdy nadchodzący event ma zapowiedź."
+        >
+          {eventAlerts.map(({ event, daysUntil }) => (
+            <SignalRow
+              key={event.id}
+              label={event.name}
+              detail={`${event.place || 'bez miejsca'} · start ${event.startsOn}`}
+              badge={daysUntil === 0 ? 'dziś' : `za ${daysUntil} dni`}
+              urgent={daysUntil <= 3}
+            />
+          ))}
+        </SignalCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BellRingIcon className="size-4" />
-            Ciche kanały
-          </CardTitle>
-          <CardDescription>
-            Każdy kanał ma własny próg — Instagram milczący 3 dni to problem, newsletter co 30 dni
-            to norma. Progi zmienisz w Ustawieniach.
-          </CardDescription>
-        </CardHeader>
+        <SignalCard
+          title="Konkursy do ruszenia"
+          description="Kończą się, minął termin albo nagroda wciąż czeka na wysyłkę."
+          icon={GiftIcon}
+          to="/konkursy"
+          count={contestAlerts.length}
+          loading={contestsLoading}
+          emptyText="Żaden konkurs nie czeka na ruch."
+        >
+          {contestAlerts.map(({ contest, reason, daysUntilEnd }) => (
+            <SignalRow
+              key={contest.id}
+              label={contest.name}
+              detail={CONTEST_ALERT_LABEL[reason]}
+              badge={
+                daysUntilEnd < 0
+                  ? `${Math.abs(daysUntilEnd)} dni po`
+                  : daysUntilEnd === 0
+                    ? 'dziś'
+                    : `za ${daysUntilEnd} dni`
+              }
+              urgent={daysUntilEnd <= 0}
+            />
+          ))}
+        </SignalCard>
 
-        <CardContent>
-          {busy ? (
-            <div className="space-y-2">
-              {Array.from({ length: 3 }, (_, index) => (
-                <Skeleton key={index} className="h-10 w-full" />
-              ))}
-            </div>
-          ) : silent.length === 0 ? (
-            <div className="text-muted-foreground flex items-center gap-2 py-2 text-sm">
-              <CheckCircle2Icon className="text-primary size-4" />
-              Żaden kanał nie przekroczył swojego progu ciszy.
-            </div>
-          ) : (
-            <ul className="divide-y">
-              {silent.map(({ channel, daysSince, lastPublishedOn }) => (
-                <li key={channel.id} className="flex items-center gap-3 py-2.5">
-                  <VolumeXIcon className="text-muted-foreground size-4 shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{channel.name}</p>
-                    <p className="text-muted-foreground text-xs">
-                      {daysSince === null
-                        ? 'nic nie było wrzucane'
-                        : `ostatnio ${daysSince} dni temu (${lastPublishedOn})`}
-                      {` · próg ${channel.reminderAfterDays} dn.`}
-                    </p>
-                  </div>
-                  <Badge variant={daysSince === null ? 'destructive' : 'secondary'}>
-                    {daysSince === null ? 'nigdy' : `${daysSince} dni`}
-                  </Badge>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+        <SignalCard
+          title="Ciche kanały"
+          description="Każdy kanał ma własny próg — progi zmienisz w Ustawieniach."
+          icon={BellRingIcon}
+          to="/ustawienia"
+          count={silent.length}
+          loading={channelsLoading || silenceLoading}
+          emptyText="Żaden kanał nie przekroczył swojego progu ciszy."
+        >
+          {silent.map(({ channel, daysSince, lastPublishedOn }) => (
+            <SignalRow
+              key={channel.id}
+              label={channel.name}
+              detail={
+                daysSince === null
+                  ? `nic nie było wrzucane · próg ${channel.reminderAfterDays} dn.`
+                  : `ostatnio ${lastPublishedOn} · próg ${channel.reminderAfterDays} dn.`
+              }
+              badge={daysSince === null ? 'nigdy' : `${daysSince} dni`}
+              urgent={daysSince === null}
+            />
+          ))}
+        </SignalCard>
 
-      <div className="flex flex-wrap gap-2">
-        <Button asChild>
-          <Link to="/kalendarz">Otwórz kalendarz</Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link to="/ustawienia">Ustawienia kanałów</Link>
-        </Button>
+        <SignalCard
+          title="Zawodnicy do odwiedzenia"
+          description="Profile, których nie przeglądałeś dłużej niż ich rytm."
+          icon={UsersIcon}
+          to="/zawodnicy"
+          count={athleteAlerts.length}
+          loading={athletesLoading}
+          emptyText="Wszystkie profile na bieżąco."
+        >
+          {athleteAlerts.map(({ athlete, daysSince, lastCheckedOn }) => (
+            <SignalRow
+              key={athlete.id}
+              label={athlete.name}
+              detail={
+                daysSince === null
+                  ? `nigdy nieprzejrzany · rytm ${athlete.checkEveryDays} dn.`
+                  : `ostatnio ${lastCheckedOn} · rytm ${athlete.checkEveryDays} dn.`
+              }
+              badge={daysSince === null ? 'nigdy' : `${daysSince} dni`}
+              urgent={daysSince === null}
+            />
+          ))}
+        </SignalCard>
       </div>
     </div>
   )

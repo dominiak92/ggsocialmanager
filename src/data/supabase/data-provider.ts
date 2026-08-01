@@ -6,15 +6,36 @@
  */
 import {
   ChannelInUseError,
+  type AthleteRepo,
   type ChannelRepo,
+  type ContestRepo,
   type DataProvider,
+  type EventRepo,
   type HealthRepo,
+  type IdeaRepo,
   type PostTypeRepo,
   type PublicationRepo,
 } from '@/data/interfaces'
-import { toChannel, toHealthCheck, toPostType, toPublication } from '@/data/supabase/mappers'
+import {
+  toAthlete,
+  toAthleteCheck,
+  toChannel,
+  toContest,
+  toHealthCheck,
+  toIdea,
+  toPostType,
+  toPublication,
+  toSportEvent,
+} from '@/data/supabase/mappers'
 import type { Platform } from '@/domain/enums'
-import type { PublicationDraft, PublicationPatch } from '@/domain/models'
+import type {
+  AthletePatch,
+  ContestPatch,
+  IdeaPatch,
+  PublicationDraft,
+  PublicationPatch,
+  SportEventPatch,
+} from '@/domain/models'
 import { slugify } from '@/lib/slug'
 import { supabase } from '@/lib/supabase'
 
@@ -140,6 +161,66 @@ function publicationRow(patch: PublicationPatch) {
     ...(patch.title === undefined ? {} : { title: patch.title }),
     ...(patch.note === undefined ? {} : { note: patch.note }),
     ...(patch.url === undefined ? {} : { url: patch.url }),
+    ...(patch.eventId === undefined ? {} : { event_id: patch.eventId }),
+    ...(patch.contestId === undefined ? {} : { contest_id: patch.contestId }),
+  }
+}
+
+/**
+ * Mapowania domena → wiersz. Rozpisane jawnie pole po polu, a nie generycznie
+ * przez zamianę camelCase na snake_case: literówka w nazwie kolumny ma paść
+ * na typach, a nie po cichu wysłać nieistniejące pole do bazy.
+ */
+function eventRow(patch: SportEventPatch) {
+  return {
+    ...(patch.name === undefined ? {} : { name: patch.name }),
+    ...(patch.kind === undefined ? {} : { kind: patch.kind }),
+    ...(patch.startsOn === undefined ? {} : { starts_on: patch.startsOn }),
+    ...(patch.endsOn === undefined ? {} : { ends_on: patch.endsOn }),
+    ...(patch.place === undefined ? {} : { place: patch.place }),
+    ...(patch.isSponsored === undefined ? {} : { is_sponsored: patch.isSponsored }),
+    ...(patch.url === undefined ? {} : { url: patch.url }),
+    ...(patch.note === undefined ? {} : { note: patch.note }),
+    ...(patch.promoLeadDays === undefined ? {} : { promo_lead_days: patch.promoLeadDays }),
+  }
+}
+
+function contestRow(patch: ContestPatch) {
+  return {
+    ...(patch.name === undefined ? {} : { name: patch.name }),
+    ...(patch.channelId === undefined ? {} : { channel_id: patch.channelId }),
+    ...(patch.startsOn === undefined ? {} : { starts_on: patch.startsOn }),
+    ...(patch.endsOn === undefined ? {} : { ends_on: patch.endsOn }),
+    ...(patch.prize === undefined ? {} : { prize: patch.prize }),
+    ...(patch.status === undefined ? {} : { status: patch.status }),
+    ...(patch.winnerName === undefined ? {} : { winner_name: patch.winnerName }),
+    ...(patch.winnerContact === undefined ? {} : { winner_contact: patch.winnerContact }),
+    ...(patch.winnerAddress === undefined ? {} : { winner_address: patch.winnerAddress }),
+    ...(patch.trackingCode === undefined ? {} : { tracking_code: patch.trackingCode }),
+    ...(patch.url === undefined ? {} : { url: patch.url }),
+    ...(patch.note === undefined ? {} : { note: patch.note }),
+  }
+}
+
+function athleteRow(patch: AthletePatch) {
+  return {
+    ...(patch.name === undefined ? {} : { name: patch.name }),
+    ...(patch.discipline === undefined ? {} : { discipline: patch.discipline }),
+    ...(patch.instagramUrl === undefined ? {} : { instagram_url: patch.instagramUrl }),
+    ...(patch.otherUrl === undefined ? {} : { other_url: patch.otherUrl }),
+    ...(patch.checkEveryDays === undefined ? {} : { check_every_days: patch.checkEveryDays }),
+    ...(patch.isActive === undefined ? {} : { is_active: patch.isActive }),
+    ...(patch.note === undefined ? {} : { note: patch.note }),
+  }
+}
+
+function ideaRow(patch: IdeaPatch) {
+  return {
+    ...(patch.title === undefined ? {} : { title: patch.title }),
+    ...(patch.detail === undefined ? {} : { detail: patch.detail }),
+    ...(patch.kind === undefined ? {} : { kind: patch.kind }),
+    ...(patch.status === undefined ? {} : { status: patch.status }),
+    ...(patch.priority === undefined ? {} : { priority: patch.priority }),
   }
 }
 
@@ -176,6 +257,17 @@ const publications: PublicationRepo = {
     return latest
   },
 
+  async listLinked() {
+    const { data, error } = await supabase
+      .from('publications')
+      .select('*')
+      .or('event_id.not.is.null,contest_id.not.is.null')
+
+    if (error) fail('Nie udało się pobrać nagłośnienia', error.message)
+
+    return (data ?? []).map(toPublication)
+  },
+
   async create(draft: PublicationDraft) {
     const { data, error } = await supabase
       .from('publications')
@@ -187,6 +279,8 @@ const publications: PublicationRepo = {
         title: draft.title ?? '',
         note: draft.note ?? '',
         url: draft.url ?? '',
+        event_id: draft.eventId ?? null,
+        contest_id: draft.contestId ?? null,
       })
       .select('*')
       .single()
@@ -216,6 +310,231 @@ const publications: PublicationRepo = {
   },
 }
 
+const events: EventRepo = {
+  async list() {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('starts_on', { ascending: true })
+
+    if (error) fail('Nie udało się pobrać eventów', error.message)
+
+    return (data ?? []).map(toSportEvent)
+  },
+
+  async create(draft) {
+    const { data, error } = await supabase
+      .from('events')
+      .insert({ ...eventRow(draft), name: draft.name, starts_on: draft.startsOn })
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się dodać eventu', error.message)
+
+    return toSportEvent(data)
+  },
+
+  async update(id, patch) {
+    const { data, error } = await supabase
+      .from('events')
+      .update(eventRow(patch))
+      .eq('id', id)
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się zapisać eventu', error.message)
+
+    return toSportEvent(data)
+  },
+
+  async remove(id) {
+    const { error } = await supabase.from('events').delete().eq('id', id)
+
+    if (error) fail('Nie udało się usunąć eventu', error.message)
+  },
+}
+
+const contests: ContestRepo = {
+  async list() {
+    const { data, error } = await supabase
+      .from('contests')
+      .select('*')
+      .order('ends_on', { ascending: false })
+
+    if (error) fail('Nie udało się pobrać konkursów', error.message)
+
+    return (data ?? []).map(toContest)
+  },
+
+  async create(draft) {
+    const { data, error } = await supabase
+      .from('contests')
+      .insert({
+        ...contestRow(draft),
+        name: draft.name,
+        starts_on: draft.startsOn,
+        ends_on: draft.endsOn,
+      })
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się dodać konkursu', error.message)
+
+    return toContest(data)
+  },
+
+  async update(id, patch) {
+    const { data, error } = await supabase
+      .from('contests')
+      .update(contestRow(patch))
+      .eq('id', id)
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się zapisać konkursu', error.message)
+
+    return toContest(data)
+  },
+
+  async remove(id) {
+    const { error } = await supabase.from('contests').delete().eq('id', id)
+
+    if (error) fail('Nie udało się usunąć konkursu', error.message)
+  },
+}
+
+const athletes: AthleteRepo = {
+  async list() {
+    const { data, error } = await supabase.from('athletes').select('*').order('name')
+
+    if (error) fail('Nie udało się pobrać zawodników', error.message)
+
+    return (data ?? []).map(toAthlete)
+  },
+
+  async create(draft) {
+    const { data, error } = await supabase
+      .from('athletes')
+      .insert({ ...athleteRow(draft), name: draft.name })
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się dodać zawodnika', error.message)
+
+    return toAthlete(data)
+  },
+
+  async update(id, patch) {
+    const { data, error } = await supabase
+      .from('athletes')
+      .update(athleteRow(patch))
+      .eq('id', id)
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się zapisać zawodnika', error.message)
+
+    return toAthlete(data)
+  },
+
+  async remove(id) {
+    const { error } = await supabase.from('athletes').delete().eq('id', id)
+
+    if (error) fail('Nie udało się usunąć zawodnika', error.message)
+  },
+
+  async lastCheckPerAthlete() {
+    const { data, error } = await supabase
+      .from('athlete_checks')
+      .select('athlete_id, checked_on')
+      .order('checked_on', { ascending: false })
+
+    if (error) fail('Nie udało się pobrać przeglądów', error.message)
+
+    // Posortowane malejąco — pierwszy trafiony wpis dla zawodnika jest najnowszy.
+    const latest = new Map<string, string>()
+    for (const row of data ?? []) {
+      if (!latest.has(row.athlete_id)) latest.set(row.athlete_id, row.checked_on)
+    }
+    return latest
+  },
+
+  async listChecks(athleteId) {
+    const { data, error } = await supabase
+      .from('athlete_checks')
+      .select('*')
+      .eq('athlete_id', athleteId)
+      .order('checked_on', { ascending: false })
+      .limit(50)
+
+    if (error) fail('Nie udało się pobrać historii przeglądów', error.message)
+
+    return (data ?? []).map(toAthleteCheck)
+  },
+
+  async addCheck(athleteId, checkedOn, note) {
+    const { data, error } = await supabase
+      .from('athlete_checks')
+      .insert({ athlete_id: athleteId, checked_on: checkedOn, note })
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się zapisać przeglądu', error.message)
+
+    return toAthleteCheck(data)
+  },
+
+  async removeCheck(id) {
+    const { error } = await supabase.from('athlete_checks').delete().eq('id', id)
+
+    if (error) fail('Nie udało się usunąć przeglądu', error.message)
+  },
+}
+
+const ideas: IdeaRepo = {
+  async list() {
+    const { data, error } = await supabase
+      .from('ideas')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) fail('Nie udało się pobrać pomysłów', error.message)
+
+    return (data ?? []).map(toIdea)
+  },
+
+  async create(draft) {
+    const { data, error } = await supabase
+      .from('ideas')
+      .insert({ ...ideaRow(draft), title: draft.title })
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się dodać pomysłu', error.message)
+
+    return toIdea(data)
+  },
+
+  async update(id, patch) {
+    const { data, error } = await supabase
+      .from('ideas')
+      .update(ideaRow(patch))
+      .eq('id', id)
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się zapisać pomysłu', error.message)
+
+    return toIdea(data)
+  },
+
+  async remove(id) {
+    const { error } = await supabase.from('ideas').delete().eq('id', id)
+
+    if (error) fail('Nie udało się usunąć pomysłu', error.message)
+  },
+}
+
 export function createSupabaseDataProvider(): DataProvider {
-  return { health, channels, postTypes, publications }
+  return { health, channels, postTypes, publications, events, contests, athletes, ideas }
 }

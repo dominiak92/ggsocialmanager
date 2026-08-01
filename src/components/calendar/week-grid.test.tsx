@@ -45,6 +45,8 @@ function publication(overrides: Partial<Publication> = {}): Publication {
     title: 'Rashguard Ronin',
     note: '',
     url: '',
+    eventId: null,
+    contestId: null,
     ...overrides,
   }
 }

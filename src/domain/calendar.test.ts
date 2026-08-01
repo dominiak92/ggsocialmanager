@@ -13,6 +13,8 @@ function publication(overrides: Partial<Publication>): Publication {
     title: '',
     note: '',
     url: '',
+    eventId: null,
+    contestId: null,
     ...overrides,
   }
 }
