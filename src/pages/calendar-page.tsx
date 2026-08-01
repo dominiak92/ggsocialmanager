@@ -111,39 +111,18 @@ export function CalendarPage() {
   )
 
   /**
-   * Wejscie z pulpitu (`/kalendarz?dzien=YYYY-MM-DD`) otwiera od razu panel
-   * tego dnia. Parametr czyscimy, zeby odswiezenie strony nie otwieralo go
+   * Wejście z pulpitu (`/kalendarz?dzien=YYYY-MM-DD`) otwiera od razu panel
+   * tego dnia. Parametr czyścimy, żeby odświeżenie strony nie otwierało go
    * po raz drugi.
    */
   useEffect(() => {
     const day = params.get('dzien')
-    const linkEvent = params.get('event')
-    const linkContest = params.get('konkurs')
-    const presetTitle = params.get('tytul')
-    if (!day && !linkEvent && !linkContest && !presetTitle) return
+    if (!day) return
 
-    const dateKey = day ?? toDateKey(new Date())
-    setAnchor(fromDateKey(dateKey))
-
-    // Wejscie z eventu/konkursu/pomyslu: otwieramy od razu formularz wpisu
-    // z gotowym powiazaniem, zeby nie trzeba bylo pamietac nazwy i szukac jej
-    // w liscie rozwijanej. Bez powiazania — tylko panel dnia.
-    const firstId = channels.find((channel) => channel.isActive)?.id
-    if ((linkEvent || linkContest || presetTitle) && firstId) {
-      setTarget({
-        mode: 'create',
-        publishOn: dateKey,
-        channelId: firstId,
-        eventId: linkEvent,
-        contestId: linkContest,
-        title: presetTitle ?? '',
-      })
-    } else if (day) {
-      setOpenDay(day)
-    }
-
+    setAnchor(fromDateKey(day))
+    setOpenDay(day)
     setParams({}, { replace: true })
-  }, [params, setParams, channels])
+  }, [params, setParams])
 
   const shift = (direction: -1 | 1) => {
     setAnchor((prev) =>

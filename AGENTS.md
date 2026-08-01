@@ -414,27 +414,22 @@ nazwy dwa razy do przeczytania.
 
 ## Przechodzenie między widokami
 
-Listy domenowe prowadzą do kalendarza deep-linkami, żeby nie trzeba było
-pamiętać nazwy i szukać jej w liście rozwijanej po drugiej stronie:
+Jedyne przejście z parametrem w adresie: **pulpit → „Dziś" → `/kalendarz?dzien=YYYY-MM-DD`**,
+które otwiera panel tego dnia. Parametr czyścimy po otwarciu
+(`setParams({}, { replace: true })`), żeby odświeżenie strony nie otwierało go
+po raz drugi.
 
-| Skąd                               | Adres                                   | Efekt                                 |
-| ---------------------------------- | --------------------------------------- | ------------------------------------- |
-| Pulpit → „Dziś"                    | `/kalendarz?dzien=YYYY-MM-DD`           | otwiera panel dnia                    |
-| Event → „Zapowiedz"                | `/kalendarz?event=<id>&tytul=<nazwa>`   | formularz wpisu z gotowym powiązaniem |
-| Konkurs → „Zapowiedz"              | `/kalendarz?konkurs=<id>&tytul=<nazwa>` | jw.                                   |
-| Pomysł → „Zaplanuj"                | `/kalendarz?tytul=<tytuł>`              | formularz z wypełnionym tytułem       |
-| Gala zewnętrzna → „Dodaj u siebie" | `/eventy?dodaj=<nazwa>&data=<data>`     | formularz eventu                      |
+Analogiczne skróty przy eventach, konkursach, pomysłach i galach zewnętrznych
+były zbudowane i **usunięte na wyraźną prośbę właściciela** — przeskok do innego
+widoku w środku pracy nad listą przeszkadzał bardziej, niż pomagał.
+**Nie przywracaj ich „dla spójności".**
 
-Oba **czyszczą parametry po otwarciu** (`setParams({}, { replace: true })`),
-żeby odświeżenie strony nie otwierało dialogu po raz drugi. Żaden nie zapisuje
-nic sam — otwiera wypełniony formularz i czeka na decyzję.
-
-**PUŁAPKA, która nas ugryzła:** efekt obsługujący deep-link trzymał w
-zależnościach cały obiekt z `useEntityForm`. Hook zwracał wtedy nowy literał
+**PUŁAPKA, która nas ugryzła:** efekt obsługujący deep-link trzymał
+w zależnościach cały obiekt z `useEntityForm`. Hook zwracał wtedy nowy literał
 przy każdym renderze, więc efekt odpalał się w kółko (efekt → `openCreate`
 ustawia świeży stan → render → efekt) i dialog się zawieszał. Dlatego
-`useEntityForm` zwraca teraz obiekt przez `useMemo` — jeśli dokładasz do niego
-pole, zadbaj o stabilną referencję.
+`useEntityForm` zwraca obiekt przez `useMemo` — jeśli dokładasz do niego pole,
+zadbaj o stabilną referencję.
 
 ## Sygnały na pulpicie
 
@@ -447,6 +442,11 @@ wydarzenia" (`upcomingEvents`, `tone="info"`). Sygnał „event bez zapowiedzi"
 z definicji milczy, dopóki wydarzenie nie wejdzie w swoje `promo_lead_days`,
 więc przy planach na kwartał do przodu pulpit nie mówił o nich nic. Karty
 informacyjnej NIE oznaczaj czerwonym licznikiem — nic się w niej nie pali.
+
+`SignalRow` bez `badge` i bez `trailing` **nie renderuje niczego po prawej**.
+Wcześniej wychodziła z tego pusta plakietka — widoczny, pusty prostokąt przy
+każdym wierszu bez akcji. Jeśli wiersz ma coś powiedzieć po prawej, podaj
+`badge` (tekst) albo `trailing` (własny element), a nie licz na domyślną.
 
 | Sygnał                  | Kiedy krzyczy                                                                                       |
 | ----------------------- | --------------------------------------------------------------------------------------------------- |

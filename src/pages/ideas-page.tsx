@@ -120,14 +120,27 @@ export function IdeasPage() {
                 )}
               >
                 {idea.kind === 'idea' ? (
-                  <LightbulbIcon className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                  <LightbulbIcon
+                    aria-label={IDEA_KIND_LABEL.idea}
+                    className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                  />
                 ) : (
-                  <MessageSquareIcon className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                  <MessageSquareIcon
+                    aria-label={IDEA_KIND_LABEL.discuss}
+                    className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                  />
                 )}
 
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium">{idea.title}</span>
+                  {/* Tytuł w osobnej linii: przy plakietkach w tym samym rzędzie
+                      długi tytuł na telefonie łamał się w jedną literę na wiersz. */}
+                  <p className="font-medium break-words">{idea.title}</p>
+
+                  {/* Wszystkie plakietki w JEDNYM zawijanym rzędzie. Rodzaj stał
+                      wcześniej w prawej kolumnie o stałej szerokości i na wąskim
+                      ekranie zjadał miejsce tytułowi. */}
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <Badge variant="secondary">{IDEA_KIND_LABEL[idea.kind]}</Badge>
                     {idea.priority === 'high' && <Badge variant="destructive">Wysoki</Badge>}
                     <Badge variant="outline">{IDEA_STATUS_LABEL[idea.status]}</Badge>
                   </div>
@@ -137,10 +150,6 @@ export function IdeasPage() {
                     </p>
                   )}
                 </div>
-
-                <Badge variant="secondary" className="shrink-0">
-                  {IDEA_KIND_LABEL[idea.kind]}
-                </Badge>
               </button>
             </li>
           ))}

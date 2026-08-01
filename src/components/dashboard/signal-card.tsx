@@ -155,11 +155,15 @@ export function SignalRow({
         </p>
         <p className="text-muted-foreground text-xs">{detail}</p>
       </div>
-      {trailing ?? (
-        <Badge variant={urgent ? 'destructive' : 'secondary'} className="shrink-0">
-          {badge}
-        </Badge>
-      )}
+      {/* Brak `trailing` I brak `badge` = nic po prawej. Wcześniej wychodziła
+          z tego pusta plakietka — widoczny, pusty prostokąt przy każdym
+          wierszu bez akcji. */}
+      {trailing ??
+        (badge ? (
+          <Badge variant={urgent ? 'destructive' : 'secondary'} className="shrink-0">
+            {badge}
+          </Badge>
+        ) : null)}
     </li>
   )
 }

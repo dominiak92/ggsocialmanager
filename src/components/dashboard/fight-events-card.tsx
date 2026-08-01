@@ -53,9 +53,8 @@ export function FightEventsCard({ mine, today }: { mine: SportEvent[]; today: Da
           <SignalRow
             key={event.id}
             label={event.name}
-            detail={`${event.organization}${event.place ? ` · ${event.place}` : ''} · ${
-              days === 0 ? 'dziś' : `za ${days} dni`
-            }`}
+            detail={`${event.organization}${event.place ? ` · ${event.place}` : ''}`}
+            badge={days === 0 ? 'dziś' : `za ${days} dni`}
             trailing={
               owned ? (
                 <Badge variant="secondary" className="shrink-0">
