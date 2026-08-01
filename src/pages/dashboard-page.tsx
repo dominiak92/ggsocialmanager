@@ -1,6 +1,7 @@
 import { BellRingIcon, GiftIcon, MegaphoneIcon, UsersIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
+import { DailyTasksCard } from '@/components/dashboard/daily-tasks-card'
 import { FightEventsCard } from '@/components/dashboard/fight-events-card'
 import { SignalCard, SignalRow } from '@/components/dashboard/signal-card'
 import { TodayCard } from '@/components/dashboard/today-card'
@@ -23,8 +24,9 @@ const DASHBOARD_ROWS = 5
 /**
  * Pulpit składa się z dwóch warstw i to rozróżnienie jest w nim najważniejsze:
  *
- * 1. **„Dziś"** — bieżąca praca. Odpowiada na pytanie, od którego zaczyna się
- *    dzień: co mam dziś i co już poszło.
+ * 1. **„Dziś" i „Codzienna rutyna"** — bieżąca praca. Odpowiadają na pytania,
+ *    od których zaczyna się dzień: co mam dziś, co już poszło i czy nic nie
+ *    wisi w skrzynkach.
  * 2. **Sygnały** — co umyka. WSZYSTKIE wyliczane z danych, żaden nie jest
  *    listą do uzupełniania: lista, o której trzeba pamiętać, żeby ją wypełnić,
  *    nie chroni przed zapomnieniem.
@@ -101,6 +103,8 @@ export function DashboardPage() {
       </div>
 
       <TodayCard channels={channels} postTypes={postTypes} />
+
+      <DailyTasksCard channels={channels} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <SignalCard

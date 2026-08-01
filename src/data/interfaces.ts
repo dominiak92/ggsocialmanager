@@ -17,6 +17,10 @@ import type {
   Contest,
   ContestDraft,
   ContestPatch,
+  DailyTaskCheck,
+  DailyTaskType,
+  DailyTaskTypeDraft,
+  DailyTaskTypePatch,
   HealthCheck,
   Idea,
   IdeaDraft,
@@ -137,6 +141,21 @@ export type AthleteRepo = {
   removeCheck(id: string): Promise<void>
 }
 
+export type DailyTaskTypeRepo = {
+  list(): Promise<DailyTaskType[]>
+  create(draft: DailyTaskTypeDraft): Promise<DailyTaskType>
+  update(id: string, patch: DailyTaskTypePatch): Promise<DailyTaskType>
+  /** Kasowanie zabiera też historię odhaczeń (`on delete cascade`). */
+  remove(id: string): Promise<void>
+}
+
+export type DailyTaskCheckRepo = {
+  listForDay(day: string): Promise<DailyTaskCheck[]>
+  /** Odhaczenie. Ponowne wywołanie dla tego samego dnia nie duplikuje wpisu. */
+  check(taskTypeId: string, market: string | null, day: string): Promise<DailyTaskCheck>
+  uncheck(id: string): Promise<void>
+}
+
 export type RecordingStageRepo = {
   list(): Promise<RecordingStage[]>
   create(draft: RecordingStageDraft): Promise<RecordingStage>
@@ -174,4 +193,6 @@ export type DataProvider = {
   ideas: IdeaRepo
   recordingStages: RecordingStageRepo
   recordings: RecordingRepo
+  dailyTaskTypes: DailyTaskTypeRepo
+  dailyTaskChecks: DailyTaskCheckRepo
 }

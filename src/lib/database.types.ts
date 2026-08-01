@@ -207,6 +207,71 @@ export type Database = {
           },
         ]
       }
+      daily_task_checks: {
+        Row: {
+          created_at: string
+          done_on: string
+          id: string
+          market: string | null
+          task_type_id: string
+        }
+        Insert: {
+          created_at?: string
+          done_on?: string
+          id?: string
+          market?: string | null
+          task_type_id: string
+        }
+        Update: {
+          created_at?: string
+          done_on?: string
+          id?: string
+          market?: string | null
+          task_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_task_checks_task_type_id_fkey"
+            columns: ["task_type_id"]
+            isOneToOne: false
+            referencedRelation: "daily_task_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_task_types: {
+        Row: {
+          created_at: string
+          hint: string
+          id: string
+          is_active: boolean
+          name: string
+          per_market: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hint?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          per_market?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hint?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          per_market?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           created_at: string

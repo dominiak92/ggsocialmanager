@@ -26,6 +26,7 @@ Zrobione: **cały plan (kroki 1–8)**. Stan:
 | 7   | Pulpit z **wyliczanymi** przypomnieniami                                | gotowe |
 | 8   | Filtry, wyszukiwanie, limity list                                       | gotowe |
 | 9   | Nagrywki — materiały do nakręcenia, etapy definiowane przez właściciela | gotowe |
+| 10  | Codzienna rutyna — wiadomości, komentarze i oznaczenia per rynek        | gotowe |
 
 **Przypomnienia mają być wyliczane z danych, nie wpisywane ręcznie.** Lista,
 o której trzeba pamiętać, żeby ją uzupełnić, nie chroni przed zapomnieniem.
@@ -217,6 +218,12 @@ Twarde granice:
   w schemacie są odebrane (`alter default privileges ... revoke all`), więc każda
   nowa tabela wymaga świadomego `grant`. Kopiuj wzorzec z migracji
   `20260801140000_channels_publications.sql`.
+- **Cel `ON CONFLICT` musi być KOLUMNAMI, nie wyrażeniem.** PostgREST przy
+  `upsert` potrafi wskazać wyłącznie kolumny, więc unikat na
+  `coalesce(market, '')` sprawiał, że podwójne kliknięcie kończyło się błędem
+  zamiast być bez skutku. Rozwiązanie: zwykły indeks kolumnowy z
+  `NULLS NOT DISTINCT` (Postgres 15+) — `upsert` go widzi, a NULL-e nadal nie
+  przepuszczają duplikatów. Patrz `daily_task_checks_unique`.
 - **Czasu modyfikacji nie ustawia klient** — pilnuje go trigger
   `ggsm.touch_updated_at()`. Podpinaj go do każdej nowej tabeli.
 - **Zmiany schematu idą przez migracje** w `supabase/migrations/`, nie przez
@@ -310,6 +317,17 @@ z Git Basha, nie z PowerShella.
   przycisk przesuwający nagrywkę dalej. Koniec pipeline'u ustawia `is_done`.
   Zawodnik jest opcjonalny i `on delete set null` — nagrywka przeżywa
   zakończenie współpracy.
+- **Codzienna rutyna** (`daily_task_types` + `daily_task_checks`). Rodzaje
+  zadań definiuje właściciel; startowo: wiadomości, komentarze, oznaczenia.
+  **`per_market` jest sednem tego modelu** — wiadomości i komentarze trzeba
+  przejrzeć osobno na każdym rynku (każdy fanpage ma własną skrzynkę), ale
+  oznaczenia ogarnia się raz dla marki. Rynki czytamy z AKTYWNYCH kanałów
+  (`marketsInUse`), nie ze stałej listy `LOCALES`: inaczej rutyna kazałaby
+  sprawdzać rynek, którego nie prowadzimy, i lista nigdy nie byłaby domknięta.
+  **Odhaczenie to WIERSZ w logu z datą — obecność wiersza znaczy „zrobione".**
+  Dzięki temu reset o północy dzieje się sam: nowy dzień to brak wpisów, bez
+  żadnego zadania cyklicznego i bez kolumny do czyszczenia. Log daje też
+  historię — widać, czy któryś rynek jest regularnie pomijany.
 - **Pomysły** (`ideas`) — `kind` rozdziela pomysł od tematu „do przegadania",
   `status` i `priority` porządkują listę.
 

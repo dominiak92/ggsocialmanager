@@ -2,6 +2,7 @@ import { BellOffIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
 
 import { ChannelDialog, type ChannelTarget } from '@/components/settings/channel-dialog'
+import { DailyTasksSettingsCard } from '@/components/settings/daily-tasks-card'
 import { StageListCard } from '@/components/settings/stage-list-card'
 import {
   AlertDialog,
@@ -150,6 +151,8 @@ export function SettingsPage() {
           </Card>
         ))
       )}
+
+      <DailyTasksSettingsCard />
 
       <StageListCard
         title="Rodzaje postów"

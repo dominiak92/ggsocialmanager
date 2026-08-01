@@ -20,6 +20,8 @@ import type {
   AthleteCheck,
   Channel,
   Contest,
+  DailyTaskCheck,
+  DailyTaskType,
   HealthCheck,
   Idea,
   PostType,
@@ -168,5 +170,25 @@ export function toRecording(row: Tables['recordings']['Row']): Recording {
     stageId: row.stage_id,
     note: row.note,
     isDone: row.is_done,
+  }
+}
+
+export function toDailyTaskType(row: Tables['daily_task_types']['Row']): DailyTaskType {
+  return {
+    id: row.id,
+    name: row.name,
+    hint: row.hint,
+    perMarket: row.per_market,
+    sortOrder: row.sort_order,
+    isActive: row.is_active,
+  }
+}
+
+export function toDailyTaskCheck(row: Tables['daily_task_checks']['Row']): DailyTaskCheck {
+  return {
+    id: row.id,
+    taskTypeId: row.task_type_id,
+    market: row.market,
+    doneOn: row.done_on,
   }
 }

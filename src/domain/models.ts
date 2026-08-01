@@ -235,6 +235,44 @@ export type Recording = {
 export type RecordingDraft = Omit<Recording, 'id'>
 export type RecordingPatch = Partial<RecordingDraft>
 
+/**
+ * Rodzaj codziennego zadania — słownik właściciela.
+ *
+ * `perMarket` to sedno modelu: wiadomości i komentarze trzeba przejrzeć
+ * OSOBNO na każdym rynku (każdy fanpage ma własną skrzynkę), a oznaczenia
+ * ogarnia się raz dla całej marki.
+ */
+export type DailyTaskType = {
+  id: string
+  name: string
+  hint: string
+  perMarket: boolean
+  sortOrder: number
+  isActive: boolean
+}
+
+export type DailyTaskTypeDraft = {
+  name: string
+  hint: string
+  perMarket: boolean
+  sortOrder: number
+}
+export type DailyTaskTypePatch = Partial<DailyTaskTypeDraft & { isActive: boolean }>
+
+/**
+ * Odhaczenie zadania w konkretnym dniu.
+ *
+ * Sama OBECNOŚĆ wpisu znaczy „zrobione" — dzięki temu reset o północy dzieje
+ * się sam, bez zadania cyklicznego i bez kolumny do czyszczenia.
+ */
+export type DailyTaskCheck = {
+  id: string
+  taskTypeId: string
+  /** `null` dla zadań wspólnych dla całej marki. */
+  market: string | null
+  doneOn: string
+}
+
 /** Pomysł albo temat do przegadania. */
 export type Idea = {
   id: string

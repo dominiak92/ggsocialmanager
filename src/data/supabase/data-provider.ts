@@ -9,6 +9,8 @@ import {
   type AthleteRepo,
   type ChannelRepo,
   type ContestRepo,
+  type DailyTaskCheckRepo,
+  type DailyTaskTypeRepo,
   type DataProvider,
   type EventRepo,
   type HealthRepo,
@@ -23,6 +25,8 @@ import {
   toAthleteCheck,
   toChannel,
   toContest,
+  toDailyTaskCheck,
+  toDailyTaskType,
   toHealthCheck,
   toIdea,
   toPostType,
@@ -35,6 +39,7 @@ import type { Platform } from '@/domain/enums'
 import type {
   AthletePatch,
   ContestPatch,
+  DailyTaskTypePatch,
   IdeaPatch,
   PostTypePatch,
   PublicationDraft,
@@ -707,6 +712,93 @@ const recordings: RecordingRepo = {
   },
 }
 
+function dailyTaskTypeRow(patch: DailyTaskTypePatch) {
+  return {
+    ...(patch.name === undefined ? {} : { name: patch.name }),
+    ...(patch.hint === undefined ? {} : { hint: patch.hint }),
+    ...(patch.perMarket === undefined ? {} : { per_market: patch.perMarket }),
+    ...(patch.sortOrder === undefined ? {} : { sort_order: patch.sortOrder }),
+    ...(patch.isActive === undefined ? {} : { is_active: patch.isActive }),
+  }
+}
+
+const dailyTaskTypes: DailyTaskTypeRepo = {
+  async list() {
+    const { data, error } = await supabase
+      .from('daily_task_types')
+      .select('*')
+      .order('sort_order', { ascending: true })
+
+    if (error) fail('Nie udało się pobrać codziennych zadań', error.message)
+
+    return (data ?? []).map(toDailyTaskType)
+  },
+
+  async create(draft) {
+    const { data, error } = await supabase
+      .from('daily_task_types')
+      .insert({ ...dailyTaskTypeRow(draft), name: draft.name })
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się dodać zadania', error.message)
+
+    return toDailyTaskType(data)
+  },
+
+  async update(id, patch) {
+    const { data, error } = await supabase
+      .from('daily_task_types')
+      .update(dailyTaskTypeRow(patch))
+      .eq('id', id)
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się zapisać zadania', error.message)
+
+    return toDailyTaskType(data)
+  },
+
+  async remove(id) {
+    const { error } = await supabase.from('daily_task_types').delete().eq('id', id)
+
+    if (error) fail('Nie udało się usunąć zadania', error.message)
+  },
+}
+
+const dailyTaskChecks: DailyTaskCheckRepo = {
+  async listForDay(day) {
+    const { data, error } = await supabase.from('daily_task_checks').select('*').eq('done_on', day)
+
+    if (error) fail('Nie udało się pobrać odhaczeń', error.message)
+
+    return (data ?? []).map(toDailyTaskCheck)
+  },
+
+  async check(taskTypeId, market, day) {
+    // `upsert` zamiast `insert`: podwójne kliknięcie ma być bez skutku,
+    // a nie kończyć się błędem naruszenia unikatu.
+    const { data, error } = await supabase
+      .from('daily_task_checks')
+      .upsert(
+        { task_type_id: taskTypeId, market, done_on: day },
+        { onConflict: 'task_type_id, market, done_on', ignoreDuplicates: false },
+      )
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się odhaczyć zadania', error.message)
+
+    return toDailyTaskCheck(data)
+  },
+
+  async uncheck(id) {
+    const { error } = await supabase.from('daily_task_checks').delete().eq('id', id)
+
+    if (error) fail('Nie udało się cofnąć odhaczenia', error.message)
+  },
+}
+
 export function createSupabaseDataProvider(): DataProvider {
   return {
     health,
@@ -719,5 +811,7 @@ export function createSupabaseDataProvider(): DataProvider {
     ideas,
     recordingStages,
     recordings,
+    dailyTaskTypes,
+    dailyTaskChecks,
   }
 }
