@@ -192,6 +192,9 @@ supabase/migrations/    # zmiany schematu `ggsm` (nigdy `public`)
 
 ## Deploy
 
+Site: **[ggsocialmanager.netlify.app](https://ggsocialmanager.netlify.app)**
+(konto `dominiak92`, repo `dominiak92/ggsocialmanager` podpięte przez GitHub App).
+
 Push na `main` → Netlify buduje automatycznie (`npm run build`, katalog `dist`).
 SPA fallback jest w `netlify.toml` — bez niego odświeżenie na podstronie da 404.
 
