@@ -142,7 +142,10 @@ export function CalendarPage() {
           <p className="text-muted-foreground text-sm capitalize">{title}</p>
         </div>
 
-        <div className="ml-auto flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        {/* Na telefonie sterowanie idzie w dwa pełnej szerokości rzędy zamiast
+            zawijać się wokół `ml-auto` — inaczej przyciski lądują nierówno
+            przyklejone do prawej krawędzi. */}
+        <div className="ml-auto flex w-full items-center gap-2 sm:w-auto">
           <Tabs value={view} onValueChange={(value) => setView(value as View)}>
             <TabsList>
               <TabsTrigger value="week">Tydzień</TabsTrigger>
@@ -150,7 +153,7 @@ export function CalendarPage() {
             </TabsList>
           </Tabs>
 
-          <div className="flex items-center gap-1">
+          <div className="ml-auto flex items-center gap-1 sm:ml-0">
             <Button variant="outline" size="icon" onClick={() => shift(-1)} aria-label="Poprzedni">
               <ChevronLeftIcon />
             </Button>
@@ -161,22 +164,26 @@ export function CalendarPage() {
               <ChevronRightIcon />
             </Button>
           </div>
-
-          {firstChannelId && (
-            <Button
-              onClick={() =>
-                setTarget({
-                  mode: 'create',
-                  publishOn: toDateKey(new Date()),
-                  channelId: firstChannelId,
-                })
-              }
-            >
-              <PlusIcon />
-              Dodaj
-            </Button>
-          )}
         </div>
+
+        {/* „Dodaj" jest RODZEŃSTWEM sterowania, nie jego dzieckiem: przycisk
+            pełnej szerokości w rzędzie bez zawijania ściskałby zakładki
+            i nawigację dat. Tutaj zawija się do własnej linii. */}
+        {firstChannelId && (
+          <Button
+            className="w-full sm:w-auto"
+            onClick={() =>
+              setTarget({
+                mode: 'create',
+                publishOn: toDateKey(new Date()),
+                channelId: firstChannelId,
+              })
+            }
+          >
+            <PlusIcon />
+            Dodaj
+          </Button>
+        )}
       </div>
 
       {error && (

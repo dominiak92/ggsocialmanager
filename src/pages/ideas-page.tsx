@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 
 import { EntityDialog } from '@/components/shared/entity-dialog'
 import { Field, NoteField, TextField } from '@/components/shared/field'
+import { FilterChips } from '@/components/shared/filter-chips'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -14,7 +15,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   IDEA_KINDS,
   IDEA_KIND_LABEL,
@@ -75,19 +75,25 @@ export function IdeasPage() {
             Wrzutki na przyszłe posty i tematy do przegadania z zespołem.
           </p>
         </div>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Tabs value={filter} onValueChange={(value) => setFilter(value as Filter)}>
-            <TabsList>
-              <TabsTrigger value="open">Otwarte</TabsTrigger>
-              <TabsTrigger value="all">Wszystkie</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <Button className="w-full sm:w-auto" onClick={() => dialog.openCreate()}>
-            <PlusIcon />
-            Dodaj
-          </Button>
-        </div>
+        <Button className="w-full sm:ml-auto sm:w-auto" onClick={() => dialog.openCreate()}>
+          <PlusIcon />
+          Dodaj
+        </Button>
       </div>
+
+      <FilterChips
+        ariaLabel="Zakres pomysłów"
+        value={filter}
+        onChange={setFilter}
+        options={[
+          {
+            value: 'open',
+            label: 'Otwarte',
+            count: items.filter((idea) => idea.status === 'new' || idea.status === 'doing').length,
+          },
+          { value: 'all', label: 'Wszystkie', count: items.length },
+        ]}
+      />
 
       {error && (
         <p className="border-destructive/40 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">

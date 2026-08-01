@@ -533,6 +533,26 @@ API i funkcji Netlify jako proxy klucza.
 Aplikacja jest używana na telefonie w trakcie pracy, więc to nie jest wariant
 zapasowy. Zasady, których nie łam:
 
+- **Nagłówek strony ma jeden układ** i nie kombinuj z nim:
+
+  ```tsx
+  <div className="flex flex-wrap items-start gap-3">
+    <div className="space-y-1"> tytuł + podtytuł </div>
+    <Button className="w-full sm:ml-auto sm:w-auto"> akcja </Button>
+  </div>
+  <FilterChips … />   {/* filtry ZAWSZE osobnym rzędem pod spodem */}
+  ```
+
+  **Nie wkładaj `w-full` do kontenera z `ml-auto`.** Kontener ma wtedy szerokość
+  swojej treści, a przycisk „pełnej szerokości" wypełnia tylko ją i ląduje
+  przyklejony do prawej krawędzi — dokładnie ten błąd był w Pomysłach
+  i w Kalendarzu. Element, który ma na telefonie zająć całą szerokość, musi być
+  RODZEŃSTWEM w zawijanym rzędzie, a nie dzieckiem grupy dosuniętej do prawej.
+
+- **Filtry list to `FilterChips`, nie `Tabs`.** Chipy przewijają się w poziomie,
+  niosą liczniki i wyglądają tak samo na wszystkich listach. `Tabs` zostały
+  wyłącznie w kalendarzu, gdzie przełączają WIDOK (tydzień/miesiąc), a nie
+  filtrują listę.
 - **Responsywność robimy KLASAMI CSS.** Szybsze i nie migocze przy pierwszym
   renderze. `useIsMobile()` (`hooks/use-media-query.ts`) jest wyłącznie dla
   przypadków, w których od szerokości zależy ZACHOWANIE, nie wygląd — dziś
