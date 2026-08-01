@@ -270,25 +270,34 @@ const publications: PublicationRepo = {
   },
 
   async create(draft: PublicationDraft) {
+    const [created] = await publications.createMany([draft])
+    if (!created) fail('Nie udało się dodać wpisu', 'baza nie zwróciła wiersza')
+    return created
+  },
+
+  async createMany(drafts: PublicationDraft[]) {
+    if (drafts.length === 0) return []
+
     const { data, error } = await supabase
       .from('publications')
-      .insert({
-        publish_on: draft.publishOn,
-        channel_id: draft.channelId,
-        post_type_id: draft.postTypeId ?? null,
-        status: draft.status ?? 'planned',
-        title: draft.title ?? '',
-        note: draft.note ?? '',
-        url: draft.url ?? '',
-        event_id: draft.eventId ?? null,
-        contest_id: draft.contestId ?? null,
-      })
+      .insert(
+        drafts.map((draft) => ({
+          publish_on: draft.publishOn,
+          channel_id: draft.channelId,
+          post_type_id: draft.postTypeId ?? null,
+          status: draft.status ?? 'planned',
+          title: draft.title ?? '',
+          note: draft.note ?? '',
+          url: draft.url ?? '',
+          event_id: draft.eventId ?? null,
+          contest_id: draft.contestId ?? null,
+        })),
+      )
       .select('*')
-      .single()
 
-    if (error) fail('Nie udało się dodać wpisu', error.message)
+    if (error) fail('Nie udało się dodać wpisów', error.message)
 
-    return toPublication(data)
+    return (data ?? []).map(toPublication)
   },
 
   async update(id, patch) {

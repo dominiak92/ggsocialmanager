@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   cellKey,
+  channelsWithLocale,
   daysCovered,
   filterChannels,
   groupByCell,
@@ -152,5 +153,29 @@ describe('filterChannels', () => {
     expect(filterChannels(channels, { group: 'instagram', locale: 'CZ' }).map((c) => c.id)).toEqual(
       ['ig-cz'],
     )
+  })
+})
+
+describe('channelsWithLocale', () => {
+  const channels = [
+    channel({ id: 'fb-pl', platform: 'facebook_page', locale: 'PL' }),
+    channel({ id: 'ig-pl', platform: 'instagram', locale: 'PL' }),
+    channel({ id: 'ig-de', platform: 'instagram', locale: 'DE' }),
+    channel({ id: 'tiktok', platform: 'tiktok', locale: null }),
+  ]
+
+  it('bierze wyłącznie kanały danego rynku', () => {
+    expect(channelsWithLocale(channels, 'PL').map((c) => c.id)).toEqual(['fb-pl', 'ig-pl'])
+  })
+
+  it('POMIJA kanały bez rynku — odwrotnie niż filterChannels', () => {
+    // filterChannels zostawia TikToka przy filtrze „PL" (obsługuje wszystkie
+    // rynki), ale skrót „zaznacz PL" przy dodawaniu wpisu nie ma go dorzucać.
+    expect(channelsWithLocale(channels, 'PL').map((c) => c.id)).not.toContain('tiktok')
+    expect(filterChannels(channels, { locale: 'PL' }).map((c) => c.id)).toContain('tiktok')
+  })
+
+  it('zwraca pustą listę dla rynku, którego nikt nie obsługuje', () => {
+    expect(channelsWithLocale(channels, 'LT')).toEqual([])
   })
 })

@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -20,7 +21,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { postTypeColorClass, type PublicationStatus } from '@/domain/enums'
+import { channelsWithLocale, sectionsOf } from '@/domain/calendar'
+import {
+  CHANNEL_GROUP_LABEL,
+  LOCALES,
+  postTypeColorClass,
+  type PublicationStatus,
+} from '@/domain/enums'
 import type {
   Channel,
   Contest,
@@ -47,7 +54,7 @@ type Props = {
   events: SportEvent[]
   contests: Contest[]
   onClose: () => void
-  onCreate: (draft: PublicationDraft) => Promise<unknown>
+  onCreate: (drafts: PublicationDraft[]) => Promise<unknown>
   onUpdate: (id: string, patch: Partial<Publication>) => Promise<unknown>
   onDelete: (id: string) => Promise<unknown>
 }
@@ -56,7 +63,12 @@ type Props = {
 const NONE = '__none__'
 
 type FormState = {
-  channelId: string
+  /**
+   * Lista, nie pojedyncza wartość: ta sama treść często idzie na dwa rynki
+   * naraz. Przy edycji trzymamy tu dokładnie jeden element — istniejący wpis
+   * należy do jednego kanału, a jego „rozmnożenie” byłoby dwuznaczne.
+   */
+  channelIds: string[]
   publishOn: string
   postTypeId: string | null
   status: PublicationStatus
@@ -80,7 +92,7 @@ function initialForm(target: PublicationTarget): FormState {
   if (target.mode === 'edit') {
     const { publication } = target
     return {
-      channelId: publication.channelId,
+      channelIds: [publication.channelId],
       publishOn: publication.publishOn,
       postTypeId: publication.postTypeId,
       status: publication.status,
@@ -93,7 +105,7 @@ function initialForm(target: PublicationTarget): FormState {
   }
 
   return {
-    channelId: target.channelId,
+    channelIds: [target.channelId],
     publishOn: target.publishOn,
     postTypeId: null,
     status: defaultStatus(target.publishOn),
@@ -130,20 +142,30 @@ export function PublicationDialog({
   const patch = (next: Partial<FormState>) =>
     setForm((prev) => (prev ? { ...prev, ...next } : prev))
 
+  const canSave = form.channelIds.length > 0 && !saving
+
   const save = async () => {
+    if (!canSave) return
     setSaving(true)
     try {
       // Jeden payload dla obu ścieżek — przy dwóch kopiach łatwo zaktualizować
       // tylko jedną gałąź i stracić pole przy edycji albo przy dodawaniu.
+      // Różni je wyłącznie to, na ile kanałów treść idzie.
+      const { channelIds, ...common } = form
       const payload = {
-        ...form,
+        ...common,
         title: form.title.trim(),
         url: form.url.trim(),
         note: form.note.trim(),
       }
 
-      if (target.mode === 'edit') await onUpdate(target.publication.id, payload)
-      else await onCreate(payload)
+      if (target.mode === 'edit') {
+        await onUpdate(target.publication.id, { ...payload, channelId: channelIds[0]! })
+      } else {
+        const drafts: PublicationDraft[] = []
+        for (const channelId of channelIds) drafts.push({ ...payload, channelId })
+        await onCreate(drafts)
+      }
       onClose()
     } catch {
       // Komunikat pokazuje strona — hook trzyma ostatni błąd.
@@ -192,21 +214,35 @@ export function PublicationDialog({
         </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-4">
-          <div className="space-y-2">
-            <Label htmlFor="channel">Kanał</Label>
-            <Select value={form.channelId} onValueChange={(value) => patch({ channelId: value })}>
-              <SelectTrigger id="channel" className="w-full">
-                <SelectValue placeholder="Wybierz kanał" />
-              </SelectTrigger>
-              <SelectContent>
-                {channels.map((channel) => (
-                  <SelectItem key={channel.id} value={channel.id}>
-                    {channel.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Przy dodawaniu wybór jest wielokrotny (ta sama treść często idzie
+              na dwa rynki), przy edycji pojedynczy — istniejący wpis należy do
+              jednego kanału i „rozmnożenie" go byłoby dwuznaczne. */}
+          {isEdit ? (
+            <div className="space-y-2">
+              <Label htmlFor="channel">Kanał</Label>
+              <Select
+                value={form.channelIds[0] ?? ''}
+                onValueChange={(value) => patch({ channelIds: [value] })}
+              >
+                <SelectTrigger id="channel" className="w-full">
+                  <SelectValue placeholder="Wybierz kanał" />
+                </SelectTrigger>
+                <SelectContent>
+                  {channels.map((channel) => (
+                    <SelectItem key={channel.id} value={channel.id}>
+                      {channel.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <ChannelPicker
+              channels={channels}
+              selected={form.channelIds}
+              onChange={(channelIds) => patch({ channelIds })}
+            />
+          )}
 
           <div className="space-y-2">
             <Label>Rodzaj</Label>
@@ -342,12 +378,104 @@ export function PublicationDialog({
             <Button variant="outline" onClick={onClose} disabled={saving}>
               Anuluj
             </Button>
-            <Button onClick={save} disabled={saving}>
-              Zapisz
+            <Button onClick={save} disabled={!canSave}>
+              {form.channelIds.length > 1
+                ? `Zapisz w ${form.channelIds.length} kanałach`
+                : 'Zapisz'}
             </Button>
           </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * Wielokrotny wybór kanałów przy dodawaniu wpisu.
+ *
+ * Skróty rynków biorą kanały DOKŁADNIE danego rynku (`channelsWithLocale`),
+ * a nie te, które zostawiłby filtr kalendarza — tam kanały bez rynku celowo
+ * przeżywają filtr, tu byłyby niechcianą wrzutką.
+ *
+ * Skróty PRZEŁĄCZAJĄ, nie tylko zaznaczają: ponowne kliknięcie „PL" odznacza
+ * polskie kanały. Dzięki temu wybór składa się z kilku rynków, a pomyłkę
+ * cofa się bez czyszczenia wszystkiego.
+ */
+function ChannelPicker({
+  channels,
+  selected,
+  onChange,
+}: {
+  channels: Channel[]
+  selected: string[]
+  onChange: (ids: string[]) => void
+}) {
+  const sections = sectionsOf(channels)
+  const localesInUse = LOCALES.filter((code) => channels.some((it) => it.locale === code))
+
+  const toggle = (id: string) =>
+    onChange(selected.includes(id) ? selected.filter((it) => it !== id) : [...selected, id])
+
+  const toggleAll = (ids: string[]) => {
+    const allChosen = ids.length > 0 && ids.every((id) => selected.includes(id))
+    onChange(
+      allChosen ? selected.filter((id) => !ids.includes(id)) : [...new Set([...selected, ...ids])],
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label>Kanały</Label>
+        <span className="text-muted-foreground text-xs">
+          {selected.length === 0 ? 'nic nie wybrano' : `wybrano ${selected.length}`}
+        </span>
+      </div>
+
+      {localesInUse.length > 0 && (
+        <div className="no-scrollbar -mx-1 overflow-x-auto px-1">
+          <div className="flex w-max items-center gap-1">
+            <span className="text-muted-foreground pr-1 text-xs">rynki:</span>
+            {localesInUse.map((code) => (
+              <button
+                key={code}
+                type="button"
+                onClick={() => toggleAll(channelsWithLocale(channels, code).map((it) => it.id))}
+                className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring rounded border border-dashed px-2 py-0.5 text-xs transition focus-visible:ring-2 focus-visible:outline-none"
+              >
+                {code}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="max-h-56 space-y-3 overflow-y-auto rounded-md border p-3">
+        {sections.map((section) => (
+          <div key={section.group} className="space-y-1">
+            <button
+              type="button"
+              onClick={() => toggleAll(section.channels.map((it) => it.id))}
+              className="text-muted-foreground hover:text-foreground text-[11px] font-semibold tracking-wide uppercase transition"
+            >
+              {CHANNEL_GROUP_LABEL[section.group]}
+            </button>
+
+            {section.channels.map((channel) => (
+              <label
+                key={channel.id}
+                className="hover:bg-accent flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm"
+              >
+                <Checkbox
+                  checked={selected.includes(channel.id)}
+                  onCheckedChange={() => toggle(channel.id)}
+                />
+                {channel.name}
+              </label>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }

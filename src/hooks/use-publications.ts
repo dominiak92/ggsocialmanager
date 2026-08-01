@@ -8,6 +8,7 @@ type State = {
   error: string | null
   loading: boolean
   create: (draft: PublicationDraft) => Promise<Publication>
+  createMany: (drafts: PublicationDraft[]) => Promise<Publication[]>
   update: (id: string, patch: PublicationPatch) => Promise<Publication>
   remove: (id: string) => Promise<void>
 }
@@ -63,6 +64,18 @@ export function usePublications(from: string, to: string): State {
     }
   }, [])
 
+  const createMany = useCallback(async (drafts: PublicationDraft[]) => {
+    try {
+      const created = await dataProvider.publications.createMany(drafts)
+      setPublications((prev) => [...prev, ...created])
+      setError(null)
+      return created
+    } catch (cause: unknown) {
+      setError(message(cause))
+      throw cause
+    }
+  }, [])
+
   const update = useCallback(async (id: string, patch: PublicationPatch) => {
     try {
       const saved = await dataProvider.publications.update(id, patch)
@@ -86,5 +99,5 @@ export function usePublications(from: string, to: string): State {
     }
   }, [])
 
-  return { publications, error, loading, create, update, remove }
+  return { publications, error, loading, create, createMany, update, remove }
 }

@@ -279,6 +279,19 @@ z Git Basha, nie z PowerShella.
 - **Pomysły** (`ideas`) — `kind` rozdziela pomysł od tematu „do przegadania",
   `status` i `priority` porządkują listę.
 
+**Jedna treść może iść na kilka kanałów naraz.** Dialog wpisu ma przy
+DODAWANIU wielokrotny wybór kanałów, a przy EDYCJI pojedynczy — istniejąca
+publikacja należy do jednego kanału i jej „rozmnożenie" byłoby dwuznaczne.
+Zapis idzie przez `publications.createMany` jednym żądaniem, nie pętlą: N
+osobnych zapytań to N okazji do częściowej porażki i N przeładowań listy.
+
+Skróty rynków w tym wyborze używają `channelsWithLocale`, a NIE
+`filterChannels`. Różnica jest celowa i łatwo ją zepsuć: filtr kalendarza
+zostawia kanały bez rynku (TikTok, YouTube, newsletter, WWW), bo obsługują
+wszystkie rynki naraz i ich zniknięcie sugerowałoby dziurę w pokryciu — ale
+skrót „zaznacz PL" przy dodawaniu wpisu ma zaznaczyć polskie kanały, a nie
+dorzucić TikToka. Obie funkcje mają testy opisujące tę różnicę.
+
 **Daty to daty, nie momenty.** `publish_on` jest typu `date`, a klucz dnia
 w kodzie składa `toDateKey()` z lokalnych komponentów. **Nigdy nie używaj
 `toISOString()`** do klucza dnia — konwersja do UTC przesuwa wieczorne wpisy na

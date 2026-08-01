@@ -71,6 +71,19 @@ export function filterChannels(
   })
 }
 
+/**
+ * Kanały należące DOKŁADNIE do danego rynku.
+ *
+ * Uwaga na różnicę wobec `filterChannels`: tam kanały bez rynku (TikTok,
+ * YouTube, Newsletter, WWW) zostają widoczne, bo obsługują wszystkie rynki
+ * naraz i ich ukrycie sugerowałoby dziurę w pokryciu. Tutaj jest odwrotnie —
+ * skrót „zaznacz PL" ma zaznaczyć polskie kanały, a nie dorzucić TikToka,
+ * który nie jest „polski" bardziej niż każdy inny.
+ */
+export function channelsWithLocale(channels: Channel[], locale: string): Channel[] {
+  return channels.filter((channel) => channel.locale === locale)
+}
+
 /** Ile dni w zakresie ma choć jedną publikację (dowolnego kanału). */
 export function daysCovered(publications: Publication[]): number {
   return new Set(publications.map((p) => p.publishOn)).size

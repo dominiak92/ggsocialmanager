@@ -68,7 +68,7 @@ export function CalendarPage() {
   const from = toDateKey(days[0]!)
   const to = toDateKey(days[days.length - 1]!)
 
-  const { publications, error, loading, create, update, remove } = usePublications(from, to)
+  const { publications, error, loading, createMany, update, remove } = usePublications(from, to)
 
   const activeChannels = useMemo(() => channels.filter((channel) => channel.isActive), [channels])
 
@@ -251,7 +251,7 @@ export function CalendarPage() {
         events={events}
         contests={contests}
         onClose={() => setTarget(null)}
-        onCreate={create}
+        onCreate={createMany}
         onUpdate={update}
         onDelete={remove}
       />

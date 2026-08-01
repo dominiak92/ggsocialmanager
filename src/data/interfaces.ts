@@ -84,6 +84,12 @@ export type PublicationRepo = {
    */
   listLinked(): Promise<Publication[]>
   create(draft: PublicationDraft): Promise<Publication>
+  /**
+   * Ta sama treść na kilka kanałów naraz — jednym zapisem, nie pętlą.
+   * Właściciel często wrzuca jedną rzecz na dwa rynki; N osobnych żądań
+   * dawałoby N okazji do częściowej porażki i N przeładowań listy.
+   */
+  createMany(drafts: PublicationDraft[]): Promise<Publication[]>
   update(id: string, patch: PublicationPatch): Promise<Publication>
   remove(id: string): Promise<void>
 }
