@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { cellKey, daysCovered, groupByCell, groupByDay, sectionsOf } from '@/domain/calendar'
+import {
+  cellKey,
+  daysCovered,
+  filterChannels,
+  groupByCell,
+  groupByDay,
+  sectionsOf,
+} from '@/domain/calendar'
 import type { Channel, Publication } from '@/domain/models'
 
 function publication(overrides: Partial<Publication>): Publication {
@@ -104,5 +111,46 @@ describe('daysCovered', () => {
     ]
 
     expect(daysCovered(items)).toBe(2)
+  })
+})
+
+describe('filterChannels', () => {
+  const channels = [
+    channel({ id: 'fb', platform: 'facebook_page', locale: 'PL' }),
+    channel({ id: 'ig-pl', platform: 'instagram', locale: 'PL' }),
+    channel({ id: 'ig-cz', platform: 'instagram', locale: 'CZ' }),
+    channel({ id: 'tiktok', platform: 'tiktok', locale: null }),
+  ]
+
+  it('bez filtrów zwraca wszystko', () => {
+    expect(filterChannels(channels, {}).map((c) => c.id)).toEqual([
+      'fb',
+      'ig-pl',
+      'ig-cz',
+      'tiktok',
+    ])
+  })
+
+  it('zawęża po grupie platform', () => {
+    expect(filterChannels(channels, { group: 'instagram' }).map((c) => c.id)).toEqual([
+      'ig-pl',
+      'ig-cz',
+    ])
+  })
+
+  it('przy filtrze rynku ZOSTAWIA kanały bez rynku', () => {
+    // TikTok obsługuje wszystkie rynki naraz — ukrycie go przy „PL"
+    // sugerowałoby dziurę w pokryciu, której nie ma.
+    expect(filterChannels(channels, { locale: 'PL' }).map((c) => c.id)).toEqual([
+      'fb',
+      'ig-pl',
+      'tiktok',
+    ])
+  })
+
+  it('łączy oba filtry', () => {
+    expect(filterChannels(channels, { group: 'instagram', locale: 'CZ' }).map((c) => c.id)).toEqual(
+      ['ig-cz'],
+    )
   })
 })

@@ -1,7 +1,8 @@
-import { CheckIcon, PlusIcon, StarIcon, Undo2Icon } from 'lucide-react'
+import { CheckIcon, PlusIcon, SearchIcon, StarIcon, Undo2Icon } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { EntityDialog } from '@/components/shared/entity-dialog'
+import { FilterChips } from '@/components/shared/filter-chips'
 import { Field, NoteField, NumberField, TextField } from '@/components/shared/field'
 import { SocialLink } from '@/components/shared/social-link'
 import { TagInput } from '@/components/shared/tag-input'
@@ -18,6 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { dataProvider } from '@/data/provider'
@@ -59,6 +61,7 @@ export function AthletesPage() {
   const [saving, setSaving] = useState(false)
   const [toDelete, setToDelete] = useState<Athlete | null>(null)
   const [sport, setSport] = useState<string>(ALL)
+  const [query, setQuery] = useState('')
   const [history, setHistory] = useState<AthleteCheck[]>([])
 
   const loadChecks = useCallback(() => {
@@ -79,8 +82,17 @@ export function AthletesPage() {
   const allTags = useMemo(() => tags.map((entry) => entry.tag), [tags])
 
   const visible = useMemo(() => {
-    const filtered =
-      sport === ALL ? items : items.filter((athlete) => athlete.disciplines.includes(sport))
+    // Szukamy i po nazwisku, i po sportach — „BJJ" w polu szukania ma dawać
+    // ten sam efekt co kliknięcie chipa, bez zgadywania, gdzie się kliknąć.
+    const needle = query.trim().toLowerCase()
+    const filtered = items.filter((athlete) => {
+      const matchesSport = sport === ALL || athlete.disciplines.includes(sport)
+      const matchesQuery =
+        !needle ||
+        athlete.name.toLowerCase().includes(needle) ||
+        athlete.disciplines.some((tag) => tag.toLowerCase().includes(needle))
+      return matchesSport && matchesQuery
+    })
 
     return filtered.toSorted((a, b) => {
       if (a.isStarred !== b.isStarred) return a.isStarred ? -1 : 1
@@ -88,7 +100,7 @@ export function AthletesPage() {
       const bDue = dueIds.has(b.id) ? 0 : 1
       return aDue - bDue || a.name.localeCompare(b.name, 'pl')
     })
-  }, [items, sport, dueIds])
+  }, [items, sport, dueIds, query])
 
   /** Odhaczenie: dopisuje wpis do logu, nie nadpisuje kolumny. */
   const markChecked = async (athlete: Athlete) => {
@@ -176,22 +188,26 @@ export function AthletesPage() {
         </p>
       )}
 
-      {/* Filtr sportów przewija się w poziomie zamiast zawijać —
-          patrz AGENTS.md, zasady mobile. */}
-      {tags.length > 0 && (
-        <div className="no-scrollbar -mx-4 overflow-x-auto px-4">
-          <div className="flex w-max items-center gap-1.5">
-            <FilterChip active={sport === ALL} onClick={() => setSport(ALL)}>
-              Wszyscy ({items.length})
-            </FilterChip>
-            {tags.map(({ tag, count }) => (
-              <FilterChip key={tag} active={sport === tag} onClick={() => setSport(tag)}>
-                {tag} ({count})
-              </FilterChip>
-            ))}
-          </div>
-        </div>
-      )}
+      <div className="relative">
+        <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Szukaj po nazwisku albo sporcie"
+          aria-label="Szukaj zawodnika"
+          className="pl-9"
+        />
+      </div>
+
+      <FilterChips
+        ariaLabel="Filtr sportów"
+        value={sport}
+        onChange={setSport}
+        options={[
+          { value: ALL, label: 'Wszyscy', count: items.length },
+          ...tags.map(({ tag, count }) => ({ value: tag, label: tag, count })),
+        ]}
+      />
 
       {loading ? (
         <div className="space-y-2">
@@ -204,7 +220,7 @@ export function AthletesPage() {
           <CardContent className="text-muted-foreground py-10 text-center text-sm">
             {items.length === 0
               ? 'Nie ma jeszcze żadnego zawodnika na liście.'
-              : 'Nikt nie pasuje do tego filtra.'}
+              : 'Nikt nie pasuje do tego wyszukiwania.'}
           </CardContent>
         </Card>
       ) : (
@@ -399,31 +415,5 @@ export function AthletesPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
-}
-
-function FilterChip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        'focus-visible:ring-ring rounded-md border px-2.5 py-1 text-xs font-medium whitespace-nowrap transition focus-visible:ring-2 focus-visible:outline-none',
-        active
-          ? 'bg-primary text-primary-foreground border-primary'
-          : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-      )}
-    >
-      {children}
-    </button>
   )
 }

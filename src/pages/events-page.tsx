@@ -2,6 +2,7 @@ import { CalendarClockIcon, ExternalLinkIcon, MegaphoneIcon, PlusIcon } from 'lu
 import { useEffect, useMemo, useState } from 'react'
 
 import { EntityDialog } from '@/components/shared/entity-dialog'
+import { FilterChips } from '@/components/shared/filter-chips'
 import { Field, NoteField, NumberField, TextField } from '@/components/shared/field'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -39,12 +40,15 @@ function emptyDraft(): SportEventDraft {
 
 type Target = { mode: 'create' } | { mode: 'edit'; event: SportEvent }
 
+type Range = 'upcoming' | 'past' | 'all'
+
 export function EventsPage() {
   const { items, error, loading, create, update, remove } = useEvents()
   const [target, setTarget] = useState<Target | null>(null)
   const [form, setForm] = useState<SportEventDraft>(emptyDraft)
   const [saving, setSaving] = useState(false)
   const [linked, setLinked] = useState<Publication[]>([])
+  const [range, setRange] = useState<Range>('upcoming')
 
   // Nagłośnienie liczymy z publikacji powiązanych z eventami — nie z okna
   // kalendarza, bo zapowiedź gali mogła pójść dwa miesiące wcześniej.
@@ -57,6 +61,19 @@ export function EventsPage() {
 
   const today = useMemo(() => new Date(), [])
   const promo = useMemo(() => eventPromo(items, linked, today), [items, linked, today])
+
+  const upcomingCount = promo.filter((entry) => entry.daysUntil >= 0).length
+
+  /**
+   * Domyślnie tylko nadchodzące. Lista jest posortowana rosnąco po dacie, więc
+   * bez tego filtra minione wydarzenia z czasem urosłyby na SZCZYCIE ekranu
+   * i trzeba by je przewijać, żeby dojść do tego, co dopiero będzie.
+   */
+  const visible = useMemo(() => {
+    if (range === 'all') return promo
+    if (range === 'past') return promo.filter((entry) => entry.daysUntil < 0).toReversed()
+    return promo.filter((entry) => entry.daysUntil >= 0)
+  }, [promo, range])
 
   const openCreate = () => {
     setForm(emptyDraft())
@@ -121,21 +138,34 @@ export function EventsPage() {
         </p>
       )}
 
+      <FilterChips
+        ariaLabel="Zakres wydarzeń"
+        value={range}
+        onChange={setRange}
+        options={[
+          { value: 'upcoming', label: 'Nadchodzące', count: upcomingCount },
+          { value: 'past', label: 'Minione', count: promo.length - upcomingCount },
+          { value: 'all', label: 'Wszystkie', count: promo.length },
+        ]}
+      />
+
       {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 4 }, (_, index) => (
             <Skeleton key={index} className="h-20 w-full" />
           ))}
         </div>
-      ) : promo.length === 0 ? (
+      ) : visible.length === 0 ? (
         <Card>
           <CardContent className="text-muted-foreground py-10 text-center text-sm">
-            Nie ma jeszcze żadnych wydarzeń. Dodaj pierwsze zawody albo galę.
+            {items.length === 0
+              ? 'Nie ma jeszcze żadnych wydarzeń. Dodaj pierwsze zawody albo galę.'
+              : 'Nic w tym zakresie.'}
           </CardContent>
         </Card>
       ) : (
         <ul className="space-y-2">
-          {promo.map(({ event, daysUntil, promoCount, channelCount }) => {
+          {visible.map(({ event, daysUntil, promoCount, channelCount }) => {
             const past = daysUntil < 0
             const needsPromo = !past && promoCount === 0 && daysUntil <= event.promoLeadDays
 

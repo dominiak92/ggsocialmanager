@@ -52,6 +52,25 @@ export function sectionsOf(channels: Channel[]): ChannelSection[] {
     .filter((section) => section.channels.length > 0)
 }
 
+/**
+ * Zawężenie listy kanałów w kalendarzu.
+ *
+ * Reguła nieoczywista i dlatego przetestowana: **kanały bez rynku
+ * (TikTok, YouTube, Newsletter, WWW) zostają widoczne przy filtrze rynku.**
+ * Obsługują wszystkie rynki naraz, więc ukrycie ich przy „PL" chowałoby
+ * realną pracę i sugerowało dziurę w pokryciu, której nie ma.
+ */
+export function filterChannels(
+  channels: Channel[],
+  filter: { group?: ChannelGroup | null; locale?: string | null },
+): Channel[] {
+  return channels.filter((channel) => {
+    const byGroup = !filter.group || channelGroupOf(channel.platform) === filter.group
+    const byLocale = !filter.locale || channel.locale === filter.locale || channel.locale === null
+    return byGroup && byLocale
+  })
+}
+
 /** Ile dni w zakresie ma choć jedną publikację (dowolnego kanału). */
 export function daysCovered(publications: Publication[]): number {
   return new Set(publications.map((p) => p.publishOn)).size

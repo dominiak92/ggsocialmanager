@@ -2,6 +2,7 @@ import { GiftIcon, PlusIcon, TriangleAlertIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { EntityDialog } from '@/components/shared/entity-dialog'
+import { FilterChips } from '@/components/shared/filter-chips'
 import { Field, NoteField, TextField } from '@/components/shared/field'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -44,6 +45,8 @@ function emptyDraft(): ContestDraft {
 
 type Target = { mode: 'create' } | { mode: 'edit'; contest: Contest }
 
+type Scope = 'open' | 'all'
+
 const STATUS_VARIANT: Record<ContestStatus, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   running: 'secondary',
   picking: 'destructive',
@@ -57,6 +60,7 @@ export function ContestsPage() {
   const [target, setTarget] = useState<Target | null>(null)
   const [form, setForm] = useState<ContestDraft>(emptyDraft)
   const [saving, setSaving] = useState(false)
+  const [scope, setScope] = useState<Scope>('open')
 
   const today = useMemo(() => new Date(), [])
   const alerts = useMemo(() => contestsNeedingAction(items, today), [items, today])
@@ -64,6 +68,13 @@ export function ContestsPage() {
     () => new Map(alerts.map((alert) => [alert.contest.id, alert])),
     [alerts],
   )
+  // Domyślnie chowamy rozliczone konkursy — archiwum przykrywa to,
+  // co jeszcze wymaga ruchu.
+  const visible = useMemo(
+    () => (scope === 'open' ? items.filter((contest) => contest.status !== 'sent') : items),
+    [items, scope],
+  )
+
   const channelName = (id: string | null) =>
     id ? (channels.find((channel) => channel.id === id)?.name ?? 'Nieznany kanał') : 'Kilka kanałów'
 
@@ -140,21 +151,37 @@ export function ContestsPage() {
         </p>
       )}
 
+      <FilterChips
+        ariaLabel="Zakres konkursów"
+        value={scope}
+        onChange={setScope}
+        options={[
+          {
+            value: 'open',
+            label: 'W toku',
+            count: items.filter((c) => c.status !== 'sent').length,
+          },
+          { value: 'all', label: 'Wszystkie', count: items.length },
+        ]}
+      />
+
       {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 3 }, (_, index) => (
             <Skeleton key={index} className="h-20 w-full" />
           ))}
         </div>
-      ) : items.length === 0 ? (
+      ) : visible.length === 0 ? (
         <Card>
           <CardContent className="text-muted-foreground py-10 text-center text-sm">
-            Nie ma jeszcze żadnego konkursu.
+            {items.length === 0
+              ? 'Nie ma jeszcze żadnego konkursu.'
+              : 'Wszystkie konkursy rozliczone.'}
           </CardContent>
         </Card>
       ) : (
         <ul className="space-y-2">
-          {items.map((contest) => {
+          {visible.map((contest) => {
             const alert = alertById.get(contest.id)
 
             return (

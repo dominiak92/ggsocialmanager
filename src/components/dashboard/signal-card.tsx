@@ -1,11 +1,21 @@
 import type { LucideIcon } from 'lucide-react'
 import { CheckCircle2Icon, StarIcon } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { Children, type ReactNode } from 'react'
 import { Link } from 'react-router'
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+
+/**
+ * Ile wierszy pokazujemy w karcie sygnału, zanim reszta schowa się pod linkiem.
+ *
+ * Limit jest tu kluczowy: przy 38 zawodnikach bez ani jednego przeglądu karta
+ * renderowała 38 wierszy i pulpit zamieniał się w ścianę tekstu. Pulpit ma
+ * mówić „ile i co najpilniejsze", a nie zastępować widok docelowy — pełna
+ * lista jest jedno kliknięcie dalej.
+ */
+const VISIBLE_ROWS = 5
 
 type Props = {
   title: string
@@ -20,8 +30,8 @@ type Props = {
 
 /**
  * Jedna karta sygnału na pulpicie. Wszystkie sygnały wyglądają tak samo,
- * żeby dało się je czytać rzutem oka: tytuł, licznik, lista, link do widoku,
- * w którym da się z tym coś zrobić.
+ * żeby dało się je czytać rzutem oka: tytuł, licznik, kilka najpilniejszych
+ * pozycji, link do widoku, w którym da się z tym coś zrobić.
  */
 export function SignalCard({
   title,
@@ -33,6 +43,9 @@ export function SignalCard({
   emptyText,
   children,
 }: Props) {
+  const rows = Children.toArray(children)
+  const hidden = rows.length - VISIBLE_ROWS
+
   return (
     <Card>
       <CardHeader>
@@ -63,7 +76,17 @@ export function SignalCard({
             {emptyText}
           </p>
         ) : (
-          <ul className="divide-y">{children}</ul>
+          <>
+            <ul className="divide-y">{rows.slice(0, VISIBLE_ROWS)}</ul>
+            {hidden > 0 && (
+              <Link
+                to={to}
+                className="text-muted-foreground hover:text-foreground mt-2 inline-block text-xs underline-offset-2 hover:underline"
+              >
+                …i jeszcze {hidden} — zobacz wszystkie
+              </Link>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

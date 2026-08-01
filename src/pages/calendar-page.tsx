@@ -5,10 +5,20 @@ import { DaySheet } from '@/components/calendar/day-sheet'
 import { MonthGrid } from '@/components/calendar/month-grid'
 import { PublicationDialog, type PublicationTarget } from '@/components/calendar/publication-dialog'
 import { WeekGrid } from '@/components/calendar/week-grid'
+import { FilterChips } from '@/components/shared/filter-chips'
+import { filterChannels } from '@/domain/calendar'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { postTypeColorClass } from '@/domain/enums'
+import {
+  CHANNEL_GROUP_LABEL,
+  CHANNEL_GROUPS,
+  LOCALES,
+  channelGroupOf,
+  postTypeColorClass,
+  type ChannelGroup,
+  type Locale,
+} from '@/domain/enums'
 import { useChannels } from '@/hooks/use-channels'
 import { useContests, useEvents } from '@/hooks/use-domain'
 import { usePostTypes } from '@/hooks/use-post-types'
@@ -27,11 +37,19 @@ import { cn } from '@/lib/utils'
 
 type View = 'week' | 'month'
 
+/** `Select` i chipy nie umieją wartości pustej — „bez zawężenia" ma swój token. */
+const ALL = '__all__'
+
+type GroupFilter = ChannelGroup | typeof ALL
+type LocaleFilter = Locale | typeof ALL
+
 export function CalendarPage() {
   const [view, setView] = useState<View>('week')
   const [anchor, setAnchor] = useState(() => new Date())
   const [target, setTarget] = useState<PublicationTarget | null>(null)
   const [openDay, setOpenDay] = useState<string | null>(null)
+  const [group, setGroup] = useState<GroupFilter>(ALL)
+  const [locale, setLocale] = useState<LocaleFilter>(ALL)
 
   const { channels, loading: channelsLoading } = useChannels()
   const { postTypes } = usePostTypes()
@@ -53,6 +71,26 @@ export function CalendarPage() {
   const { publications, error, loading, create, update, remove } = usePublications(from, to)
 
   const activeChannels = useMemo(() => channels.filter((channel) => channel.isActive), [channels])
+
+  /**
+   * Kanały po zawężeniu. Przy 16 wierszach siatka tygodnia nie mieści się na
+   * ekranie bez przewijania w poziomie — filtr po platformie albo rynku
+   * sprowadza ją do rozmiaru, który da się ogarnąć wzrokiem. Sama reguła
+   * (i jej wyjątek dla kanałów bez rynku) siedzi w `domain/calendar.ts`.
+   */
+  const shownChannels = useMemo(
+    () =>
+      filterChannels(activeChannels, {
+        group: group === ALL ? null : group,
+        locale: locale === ALL ? null : locale,
+      }),
+    [activeChannels, group, locale],
+  )
+
+  const localesInUse = useMemo(
+    () => LOCALES.filter((code) => activeChannels.some((channel) => channel.locale === code)),
+    [activeChannels],
+  )
 
   const shift = (direction: -1 | 1) => {
     setAnchor((prev) =>
@@ -115,6 +153,33 @@ export function CalendarPage() {
         </p>
       )}
 
+      <div className="space-y-2">
+        <FilterChips
+          ariaLabel="Filtr platform"
+          value={group}
+          onChange={setGroup}
+          options={[
+            { value: ALL, label: 'Wszystkie kanały', count: activeChannels.length },
+            ...CHANNEL_GROUPS.map((item) => ({
+              value: item,
+              label: CHANNEL_GROUP_LABEL[item],
+              count: activeChannels.filter((channel) => channelGroupOf(channel.platform) === item)
+                .length,
+            })).filter((option) => option.count > 0),
+          ]}
+        />
+
+        <FilterChips
+          ariaLabel="Filtr rynków"
+          value={locale}
+          onChange={setLocale}
+          options={[
+            { value: ALL, label: 'Wszystkie rynki' },
+            ...localesInUse.map((code) => ({ value: code, label: code })),
+          ]}
+        />
+      </div>
+
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         {postTypes.map((postType) => (
           <span
@@ -142,7 +207,7 @@ export function CalendarPage() {
       ) : view === 'week' ? (
         <WeekGrid
           days={days}
-          channels={activeChannels}
+          channels={shownChannels}
           postTypes={postTypes}
           publications={publications}
           onAdd={(dateKey, channelId) =>
@@ -155,7 +220,7 @@ export function CalendarPage() {
         <MonthGrid
           month={anchor}
           days={days}
-          channels={activeChannels}
+          channels={shownChannels}
           postTypes={postTypes}
           publications={publications}
           onOpenDay={setOpenDay}

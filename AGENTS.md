@@ -13,18 +13,18 @@ w którym widać: co i gdzie poszło, co jeszcze nie poszło, i co zaraz umknie.
 
 ## Stan projektu — przeczytaj najpierw
 
-Zrobione: **kroki 1–7** — cały zakres funkcjonalny poza szlifami. Reszta planu:
+Zrobione: **cały plan (kroki 1–8)**. Stan:
 
-| #   | Krok                                                        | Status       |
-| --- | ----------------------------------------------------------- | ------------ |
-| 1   | Kanały, rodzaje postów, publikacje                          | gotowe       |
-| 2   | Kalendarz: tydzień (siatka pokrycia) + miesiąc + panel dnia | gotowe       |
-| 3   | Eventy (zawody, gale MMA, campy) + wskaźnik nagłośnienia    | gotowe       |
-| 4   | Konkursy: pipeline do zamknięcia, zwycięzca, adres wysyłki  | gotowe       |
-| 5   | Zawodnicy sponsorowani + log przeglądów profili             | gotowe       |
-| 6   | Pomysły i „do przegadania"                                  | gotowe       |
-| 7   | Pulpit z **wyliczanymi** przypomnieniami                    | gotowe       |
-| 8   | Filtry, szybkie dodawanie, szlify mobilne                   | do zrobienia |
+| #   | Krok                                                        | Status |
+| --- | ----------------------------------------------------------- | ------ |
+| 1   | Kanały, rodzaje postów, publikacje                          | gotowe |
+| 2   | Kalendarz: tydzień (siatka pokrycia) + miesiąc + panel dnia | gotowe |
+| 3   | Eventy (zawody, gale MMA, campy) + wskaźnik nagłośnienia    | gotowe |
+| 4   | Konkursy: pipeline do zamknięcia, zwycięzca, adres wysyłki  | gotowe |
+| 5   | Zawodnicy sponsorowani + log przeglądów profili             | gotowe |
+| 6   | Pomysły i „do przegadania"                                  | gotowe |
+| 7   | Pulpit z **wyliczanymi** przypomnieniami                    | gotowe |
+| 8   | Filtry, wyszukiwanie, limity list                           | gotowe |
 
 **Przypomnienia mają być wyliczane z danych, nie wpisywane ręcznie.** Lista,
 o której trzeba pamiętać, żeby ją uzupełnić, nie chroni przed zapomnieniem.
@@ -375,6 +375,29 @@ ikony stoją w wierszu, którego kliknięcie otwiera edycję.
 **Operacje niszczące wymagają potwierdzenia.** Kasowanie zawodnika (zabiera log
 przeglądów) i kanału idzie przez `AlertDialog`. Przy zawodniku podpowiadamy
 wyłączenie przełącznika „Aktywny" jako łagodniejszą alternatywę.
+
+**Filtry idą przez `components/shared/filter-chips.tsx`** (`FilterChips`) —
+jeden komponent na wszystkie listy, żeby paski filtrów zachowywały się tak samo.
+Nie zawijają się, tylko przewijają w poziomie.
+
+## Listy muszą znosić skalę
+
+Realne dane szybko przerastają naiwne widoki. Reguły wyciągnięte z boju:
+
+- **Pulpit pokazuje maksymalnie 5 wierszy na kartę** (`VISIBLE_ROWS`
+  w `signal-card.tsx`), resztę chowa pod „…i jeszcze N". Przy 38 zawodnikach
+  bez ani jednego przeglądu karta renderowała 38 wierszy i pulpit przestawał
+  być sygnałem, a stawał się ścianą tekstu. **Nie zdejmuj tego limitu** —
+  pulpit ma mówić „ile i co najpilniejsze", pełna lista jest kliknięcie dalej.
+- **Listy z osią czasu domyślnie pokazują to, co przed nami.** Eventy startują
+  na „Nadchodzące", konkursy na „W toku". Bez tego minione wydarzenia
+  gromadzą się na SZCZYCIE listy (sortowanie rosnąco po dacie) i trzeba je
+  przewijać, żeby dojść do rzeczy wymagających reakcji.
+- **Powyżej ~20 rekordów lista potrzebuje wyszukiwarki**, nie tylko filtrów.
+  Zawodnicy szukają się po nazwisku ORAZ po sporcie — wpisanie „BJJ" daje
+  ten sam efekt co kliknięcie chipa, bo użytkownik nie ma pamiętać, gdzie kliknąć.
+- **Kalendarz zawęża się po platformie i rynku** (`filterChannels`
+  w `domain/calendar.ts`). Szesnaście wierszy nie mieści się na ekranie.
 
 ## Deploy
 
