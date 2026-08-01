@@ -82,7 +82,7 @@ export function IdeasPage() {
               <TabsTrigger value="all">Wszystkie</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button onClick={() => dialog.openCreate()}>
+          <Button className="w-full sm:w-auto" onClick={() => dialog.openCreate()}>
             <PlusIcon />
             Dodaj
           </Button>

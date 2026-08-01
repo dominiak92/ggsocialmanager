@@ -45,7 +45,7 @@ export function EntityDialog({
 
   return (
     <Dialog open onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="flex max-h-[85dvh] flex-col gap-0 sm:max-w-lg">
+      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 sm:max-h-[85dvh] sm:max-w-lg">
         <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
@@ -66,11 +66,16 @@ export function EntityDialog({
           ) : (
             <span />
           )}
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} disabled={saving}>
+          <div className="flex flex-1 gap-2 sm:flex-none">
+            <Button
+              variant="outline"
+              className="flex-1 sm:flex-none"
+              onClick={onClose}
+              disabled={saving}
+            >
               Anuluj
             </Button>
-            <Button onClick={onSave} disabled={saving || !canSave}>
+            <Button className="flex-1 sm:flex-none" onClick={onSave} disabled={saving || !canSave}>
               Zapisz
             </Button>
           </div>

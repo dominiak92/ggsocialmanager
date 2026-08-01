@@ -113,7 +113,7 @@ export function RecordingsPage() {
             Materiały do nakręcenia i na jakim są etapie. Etapy ustawiasz sam w Ustawieniach.
           </p>
         </div>
-        <Button className="ml-auto" onClick={() => dialog.openCreate()}>
+        <Button className="w-full sm:ml-auto sm:w-auto" onClick={() => dialog.openCreate()}>
           <PlusIcon />
           Dodaj nagrywkę
         </Button>
@@ -212,7 +212,7 @@ export function RecordingsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="shrink-0"
+                    className="w-full shrink-0 sm:w-auto"
                     onClick={() => void advance(recording)}
                   >
                     {next ? (

@@ -46,7 +46,22 @@ type GroupFilter = ChannelGroup | typeof ALL
 type LocaleFilter = Locale | typeof ALL
 
 export function CalendarPage() {
-  const [view, setView] = useState<View>('week')
+  /**
+   * Na telefonie startujemy od MIESIĄCA, nie od tygodnia.
+   *
+   * Siatka tygodnia potrzebuje ~700 px (16 kanałów w wierszach), więc na
+   * ekranie 360 px oznacza ciągłe przewijanie w bok. Miesiąc ma 7 równych
+   * kolumn, mieści się bez przewijania, a szczegóły i dodawanie i tak dzieją
+   * się w panelu dnia. To wybór POCZĄTKOWY — przełącznik zostaje, bo tydzień
+   * bywa potrzebny także na telefonie.
+   *
+   * Świadomie `matchMedia` wprost, a nie `useIsMobile()`: pytamy RAZ, przy
+   * pierwszym renderze. Subskrypcja przestawiałaby widok pod palcami przy
+   * obrocie telefonu, kasując świadomy wybór użytkownika.
+   */
+  const [view, setView] = useState<View>(() =>
+    window.matchMedia('(max-width: 639px)').matches ? 'month' : 'week',
+  )
   const [anchor, setAnchor] = useState(() => new Date())
   const [target, setTarget] = useState<PublicationTarget | null>(null)
   const [openDay, setOpenDay] = useState<string | null>(null)
@@ -148,7 +163,7 @@ export function CalendarPage() {
           <p className="text-muted-foreground text-sm capitalize">{title}</p>
         </div>
 
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="ml-auto flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Tabs value={view} onValueChange={(value) => setView(value as View)}>
             <TabsList>
               <TabsTrigger value="week">Tydzień</TabsTrigger>

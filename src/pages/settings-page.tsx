@@ -67,7 +67,10 @@ export function SettingsPage() {
             Wyłączone kanały znikają z kalendarza, a ich wpisy zostają nienaruszone.
           </p>
         </div>
-        <Button className="ml-auto" onClick={() => setTarget({ mode: 'create' })}>
+        <Button
+          className="w-full sm:ml-auto sm:w-auto"
+          onClick={() => setTarget({ mode: 'create' })}
+        >
           <PlusIcon />
           Dodaj kanał
         </Button>

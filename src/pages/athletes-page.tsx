@@ -278,6 +278,7 @@ export function AthletesPage() {
                 <Button
                   variant={due ? 'default' : 'outline'}
                   size="sm"
+                  className="w-full sm:w-auto"
                   onClick={() => void markChecked(athlete)}
                 >
                   <CheckIcon />

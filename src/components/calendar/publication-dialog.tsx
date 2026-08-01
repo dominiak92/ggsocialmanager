@@ -213,7 +213,7 @@ export function PublicationDialog({
       {/* Stała wysokość: nagłówek i stopka stoją, przewija się tylko środek.
           Bez tego dialog rósł i kurczył się przy zmianie treści (inna liczba
           rodzajów, dłuższa notatka), przez co przyciski skakały pod kursorem. */}
-      <DialogContent className="flex max-h-[85dvh] flex-col gap-0 sm:max-w-lg">
+      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 sm:max-h-[85dvh] sm:max-w-lg">
         <DialogHeader className="shrink-0">
           <DialogTitle>{isEdit ? 'Edytuj wpis' : 'Nowy wpis'}</DialogTitle>
           <DialogDescription className="capitalize">

@@ -528,6 +528,33 @@ darmowym poziomie bywa puste, a **kart walk nie ma** — filtr „gdzie walczą
 Polacy" jest z tego źródła niewykonalny. Gdyby był potrzebny, wymaga płatnego
 API i funkcji Netlify jako proxy klucza.
 
+## Mobile — reguły z boju
+
+Aplikacja jest używana na telefonie w trakcie pracy, więc to nie jest wariant
+zapasowy. Zasady, których nie łam:
+
+- **Responsywność robimy KLASAMI CSS.** Szybsze i nie migocze przy pierwszym
+  renderze. `useIsMobile()` (`hooks/use-media-query.ts`) jest wyłącznie dla
+  przypadków, w których od szerokości zależy ZACHOWANIE, nie wygląd — dziś
+  używa go tylko nawigacja.
+- **Nawigacja na telefonie to szuflada**, nie przewijany pasek. Osiem zakładek
+  w poziomym pasku zmuszało do szukania celu przewijaniem. Zmiana trasy zamyka
+  szufladę — bez tego zostaje otwarta nad nowym widokiem.
+- **Kalendarz startuje na telefonie od MIESIĄCA.** Siatka tygodnia potrzebuje
+  ~700 px (16 kanałów w wierszach), więc na ekranie 360 px to ciągłe
+  przewijanie w bok. Miesiąc ma 7 równych kolumn i mieści się bez przewijania,
+  a szczegóły i dodawanie dzieją się w panelu dnia. Wybór jest POCZĄTKOWY:
+  pytamy `matchMedia` raz, w inicjalizatorze stanu, a nie przez hook —
+  subskrypcja przestawiałaby widok pod palcami przy obrocie telefonu.
+- **Akcje w wierszu listy lądują POD treścią na telefonie** (`flex-col
+sm:flex-row`), a nie zawijają się w bok. Przyciski w nagłówkach stron biorą
+  pełną szerokość (`w-full sm:w-auto`).
+- **Nie zmieniaj wysokości komórek kalendarza między ekranami** — zmienia się
+  liczba widocznych kropek (`DOTS_MOBILE`), nie wysokość. Inaczej siatka
+  skacze przy dociąganiu danych.
+- Cele dotykowe: patrz zasada 5 w „Zasady dla agenta". Wysokości okna licz
+  w `dvh`, nie `vh`.
+
 ## Listy muszą znosić skalę
 
 Realne dane szybko przerastają naiwne widoki. Reguły wyciągnięte z boju:

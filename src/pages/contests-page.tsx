@@ -105,7 +105,7 @@ export function ContestsPage() {
             Konkurs kończy się sam, ale nie zamyka się sam — etapy prowadzą aż do wysłanej nagrody.
           </p>
         </div>
-        <Button className="ml-auto" onClick={() => dialog.openCreate()}>
+        <Button className="w-full sm:ml-auto sm:w-auto" onClick={() => dialog.openCreate()}>
           <PlusIcon />
           Dodaj konkurs
         </Button>
@@ -185,7 +185,12 @@ export function ContestsPage() {
                 </button>
 
                 {contest.status !== 'sent' && (
-                  <Button variant="outline" size="sm" onClick={() => void advance(contest)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    onClick={() => void advance(contest)}
+                  >
                     {contest.status === 'running' && 'Zamknij nabór'}
                     {contest.status === 'picking' && 'Zwycięzca wybrany'}
                     {contest.status === 'picked' && 'Nagroda wysłana'}

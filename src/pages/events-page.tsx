@@ -98,7 +98,7 @@ export function EventsPage() {
             liczony z publikacji, nie odhaczany ręcznie.
           </p>
         </div>
-        <Button className="ml-auto" onClick={() => dialog.openCreate()}>
+        <Button className="w-full sm:ml-auto sm:w-auto" onClick={() => dialog.openCreate()}>
           <PlusIcon />
           Dodaj event
         </Button>
@@ -142,7 +142,7 @@ export function EventsPage() {
             const needsPromo = !past && promoCount === 0 && daysUntil <= event.promoLeadDays
 
             return (
-              <li key={event.id} className="flex items-stretch gap-2">
+              <li key={event.id} className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
                 <button
                   type="button"
                   onClick={() => dialog.openEdit(event)}

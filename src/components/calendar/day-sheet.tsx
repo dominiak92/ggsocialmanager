@@ -42,7 +42,7 @@ export function DaySheet({
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-full gap-0 sm:max-w-md">
+      <SheetContent className="flex h-[85dvh] w-full flex-col gap-0 sm:h-full sm:max-w-md">
         <SheetHeader>
           <SheetTitle className="capitalize">{formatDayLong(fromDateKey(dateKey))}</SheetTitle>
           <SheetDescription>
