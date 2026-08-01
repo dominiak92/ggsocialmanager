@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router'
 
+import { LoginScreen } from '@/components/auth/login-screen'
 import { AppShell } from '@/components/layout/app-shell'
 import { Toaster } from '@/components/ui/sonner'
 import { AthletesPage } from '@/pages/athletes-page'
@@ -11,8 +12,15 @@ import { IdeasPage } from '@/pages/ideas-page'
 import { NotFoundPage } from '@/pages/not-found-page'
 import { RecordingsPage } from '@/pages/recordings-page'
 import { SettingsPage } from '@/pages/settings-page'
+import { useIdentity } from '@/lib/auth/identity'
 
 export default function App() {
+  const { identity } = useIdentity()
+
+  // Bramka przed CAŁĄ aplikacją — patrz ostrzeżenie w `lib/auth/identity.tsx`
+  // o tym, czym ona nie jest.
+  if (!identity) return <LoginScreen />
+
   return (
     <AppShell>
       <Routes>

@@ -278,38 +278,34 @@ export function ContestsPage() {
           </Select>
         </Field>
 
-        {/* Dane zwycięzcy pokazujemy dopiero, gdy są potrzebne — przy trwającym
-            konkursie tylko zaśmiecałyby formularz. */}
-        {(form.status === 'picked' || form.status === 'sent' || form.winnerName) && (
-          <>
-            <TextField
-              id="contest-winner"
-              label="Zwycięzca"
-              value={form.winnerName}
-              onChange={(winnerName) => patch({ winnerName })}
-            />
-            <TextField
-              id="contest-contact"
-              label="Kontakt"
-              value={form.winnerContact}
-              onChange={(winnerContact) => patch({ winnerContact })}
-              placeholder="e-mail albo profil"
-            />
-            <NoteField
-              id="contest-address"
-              label="Adres wysyłki"
-              value={form.winnerAddress}
-              onChange={(winnerAddress) => patch({ winnerAddress })}
-              rows={3}
-            />
-            <TextField
-              id="contest-tracking"
-              label="Numer przesyłki"
-              value={form.trackingCode}
-              onChange={(trackingCode) => patch({ trackingCode })}
-            />
-          </>
-        )}
+        {/* Dane zwycięzcy są dostępne od razu, niezależnie od etapu —
+            adres bywa znany wcześniej niż formalne rozstrzygnięcie. */}
+        <TextField
+          id="contest-winner"
+          label="Zwycięzca"
+          value={form.winnerName}
+          onChange={(winnerName) => patch({ winnerName })}
+        />
+        <TextField
+          id="contest-contact"
+          label="Kontakt"
+          value={form.winnerContact}
+          onChange={(winnerContact) => patch({ winnerContact })}
+          placeholder="e-mail albo profil"
+        />
+        <NoteField
+          id="contest-address"
+          label="Adres wysyłki"
+          value={form.winnerAddress}
+          onChange={(winnerAddress) => patch({ winnerAddress })}
+          rows={3}
+        />
+        <TextField
+          id="contest-tracking"
+          label="Numer przesyłki"
+          value={form.trackingCode}
+          onChange={(trackingCode) => patch({ trackingCode })}
+        />
 
         <TextField
           id="contest-url"

@@ -163,19 +163,34 @@ UI / hooki  ->  domain/* (nasze typy)  ->  data/interfaces (repo)  ->  [Supabase
 
 ## Tożsamość i auth
 
-**Ta aplikacja świadomie NIE MA własnego logowania.** Docelowo jest częścią
+**Wejście chroni prosta bramka na hasło** (login `admin`, hasło ze zmiennej
+`VITE_APP_PASSWORD`). Hasła NIE MA w kodzie — repozytorium jest publiczne,
+więc commit z hasłem opublikowałby je na GitHubie. Gdy zmiennej brak, bramka
+jest wyłączona, żeby lokalny dev nie mógł się zablokować.
+
+> **Bramka to ZASŁONA, nie zamek.** Hasło porównuje przeglądarka, więc siedzi
+> w bundlu JS. Co ważniejsze: klucz `anon` Supabase też jest publiczny,
+> a polityki RLS są otwarte — **dane są nadal dostępne przez samo API,
+> z pominięciem ekranu logowania.** Bramka chroni przed przypadkowym gościem,
+> nie przed kimś, kto chce się dostać do danych.
+>
+> Realna ochrona = konto w Supabase Auth + przestawienie polityk z `anon` na
+> `authenticated`. To JEDNA migracja plus podmiana `signIn` w
+> `lib/auth/identity.tsx` — UI się nie zmienia, bo tożsamość jest odseparowana.
+> Nie rób tego bez decyzji właściciela: odetnie dostęp, dopóki konto nie powstanie.
+
+**Aplikacja nie ma własnego, docelowego logowania.** Docelowo jest częścią
 większej aplikacji, która loguje użytkowników przez **Google** i przekaże tu
 gotową tożsamość.
 
 - Cały dostęp do „kto jest zalogowany" idzie przez `useIdentity()`
   (`src/lib/auth/identity.tsx`). Zwraca `Identity | null`.
-- Dziś `resolveIdentity()` zwraca **atrapę** (`Tryb samodzielny`). To NIE jest
-  konto z bazy — RLS jej nie zna i nie honoruje.
+- Dziś tożsamość pochodzi z bramki na hasło i jest **atrapą** — RLS jej nie zna
+  i nie honoruje. To zwykły znacznik „ktoś przeszedł przez ekran logowania".
 - **Podpięcie prawdziwego auth = podmiana `resolveIdentity` w tym jednym pliku.**
   Reszta kodu się nie zmienia.
-- **NIE dodawaj** ekranu logowania, `supabase.auth.signIn*` ani własnej sesji.
-  Klient Supabase ma celowo `persistSession: false` — drugi, konkurencyjny stan
-  logowania tylko myli.
+- **NIE dodawaj drugiego mechanizmu sesji.** Klient Supabase ma celowo
+  `persistSession: false`; cała tożsamość idzie przez `useIdentity()`.
 - Konsekwencja dla bazy: dopóki nie ma sesji, żądania lecą rolą `anon`. Polityki
   RLS oparte o `auth.uid()` nie zwrócą nic — i tak ma być. Projektuj je już teraz
   pod `auth.uid()`, żeby po podpięciu auth zadziałały bez migracji.
@@ -265,7 +280,11 @@ z Git Basha, nie z PowerShella.
   `picking` („minął termin, trzeba rozstrzygnąć") jest **osobnym, jawnym
   etapem**, bo to tam najczęściej coś umyka: sam upływ daty niczego nie zamyka.
   Statusu nie wyliczamy z dat — „rozstrzygnięty" i „wysłane" to decyzje
-  człowieka. **`winner_address` to dane osobowe** (patrz „Dostęp do danych").
+  człowieka. Pola zwycięzcy (imię, kontakt, **adres wysyłki**) są dostępne
+  na KAŻDYM etapie — adres bywa znany wcześniej niż formalne rozstrzygnięcie.
+  **`winner_address` to dane osobowe**, a przy obecnych politykach RLS są
+  publicznie czytelne (patrz „Dostęp do danych"); bramka na hasło tego NIE
+  zmienia.
 - **Zawodnik** (`athletes`) + **log przeglądów** (`athlete_checks`). Przegląd
   jest LOGIEM, nie kolumną „ostatnio sprawdzony": kolumna gubiłaby historię
   i nie dałoby się odróżnić kogoś zaniedbywanego od miesięcy od odwiedzonego
@@ -461,6 +480,12 @@ nie dopisuj szóstej kopii ręcznie.
 — lista pozycji definiowanych przez właściciela, z kolorem używanym w widokach
 — więc druga kopia rozjechałaby się z pierwszą przy pierwszej poprawce. Prop
 `ordered` włącza strzałki kolejności tam, gdzie kolejność coś znaczy.
+
+**Logo marki** jest w `public/gg-logo-inline.svg` (+ wariant `-dark`) i pochodzi
+z oficjalnych plików projektu groundgamelab — **nie odrysowuj znaku ręcznie**.
+Wordmark ma wpisane kolory, więc warianty przełącza klasa `dark:`, a nie
+JavaScript: inaczej logo mrugałoby przy pierwszym renderze, zanim motyw
+zostanie ustalony. Podmiana logo = podmiana pliku w `public/`.
 
 **Ikony marek:** `lucide-react` 1.x NIE MA ikon Instagrama, Facebooka ani
 innych logotypów — usunięto je z pakietu. Nasze siedzą jako inline SVG

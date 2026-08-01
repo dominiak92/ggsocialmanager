@@ -4,6 +4,7 @@ import {
   LayoutDashboardIcon,
   LightbulbIcon,
   MegaphoneIcon,
+  LogOutIcon,
   SettingsIcon,
   UsersIcon,
   VideoIcon,
@@ -11,7 +12,10 @@ import {
 import type { ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router'
 
+import { Logo } from '@/components/brand/logo'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { Button } from '@/components/ui/button'
+import { GATE_ENABLED, useIdentity } from '@/lib/auth/identity'
 import { cn } from '@/lib/utils'
 
 /**
@@ -34,12 +38,13 @@ const NAV = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
+  const { signOut } = useIdentity()
 
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="bg-background/80 sticky top-0 z-30 border-b backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-4 px-4">
-          <span className="font-semibold tracking-tight">GG Social Manager</span>
+          <Logo className="shrink-0" />
 
           {/* Pasek nawigacji nie zawija się — przewija w poziomie.
               Patrz AGENTS.md → zasady mobile. */}
@@ -68,6 +73,17 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
 
           <ThemeToggle />
+          {GATE_ENABLED && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Wyloguj"
+              title="Wyloguj"
+              onClick={signOut}
+            >
+              <LogOutIcon />
+            </Button>
+          )}
         </div>
       </header>
 

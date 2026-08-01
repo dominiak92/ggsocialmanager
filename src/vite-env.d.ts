@@ -5,6 +5,11 @@
 interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL: string
   readonly VITE_SUPABASE_ANON_KEY: string
+  /**
+   * Hasło do bramki wejściowej. Gdy puste, bramka jest wyłączona (dev).
+   * NIE trzymamy go w kodzie — repozytorium jest publiczne.
+   */
+  readonly VITE_APP_PASSWORD?: string
 }
 
 interface ImportMeta {
