@@ -1,5 +1,6 @@
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 
 import { DaySheet } from '@/components/calendar/day-sheet'
 import { MonthGrid } from '@/components/calendar/month-grid'
@@ -28,6 +29,7 @@ import {
   addMonths,
   formatMonthYear,
   formatWeekRange,
+  fromDateKey,
   monthGrid,
   startOfWeek,
   toDateKey,
@@ -48,6 +50,7 @@ export function CalendarPage() {
   const [anchor, setAnchor] = useState(() => new Date())
   const [target, setTarget] = useState<PublicationTarget | null>(null)
   const [openDay, setOpenDay] = useState<string | null>(null)
+  const [params, setParams] = useSearchParams()
   const [group, setGroup] = useState<GroupFilter>(ALL)
   const [locale, setLocale] = useState<LocaleFilter>(ALL)
 
@@ -91,6 +94,41 @@ export function CalendarPage() {
     () => LOCALES.filter((code) => activeChannels.some((channel) => channel.locale === code)),
     [activeChannels],
   )
+
+  /**
+   * Wejscie z pulpitu (`/kalendarz?dzien=YYYY-MM-DD`) otwiera od razu panel
+   * tego dnia. Parametr czyscimy, zeby odswiezenie strony nie otwieralo go
+   * po raz drugi.
+   */
+  useEffect(() => {
+    const day = params.get('dzien')
+    const linkEvent = params.get('event')
+    const linkContest = params.get('konkurs')
+    const presetTitle = params.get('tytul')
+    if (!day && !linkEvent && !linkContest && !presetTitle) return
+
+    const dateKey = day ?? toDateKey(new Date())
+    setAnchor(fromDateKey(dateKey))
+
+    // Wejscie z eventu/konkursu/pomyslu: otwieramy od razu formularz wpisu
+    // z gotowym powiazaniem, zeby nie trzeba bylo pamietac nazwy i szukac jej
+    // w liscie rozwijanej. Bez powiazania — tylko panel dnia.
+    const firstId = channels.find((channel) => channel.isActive)?.id
+    if ((linkEvent || linkContest || presetTitle) && firstId) {
+      setTarget({
+        mode: 'create',
+        publishOn: dateKey,
+        channelId: firstId,
+        eventId: linkEvent,
+        contestId: linkContest,
+        title: presetTitle ?? '',
+      })
+    } else if (day) {
+      setOpenDay(day)
+    }
+
+    setParams({}, { replace: true })
+  }, [params, setParams, channels])
 
   const shift = (direction: -1 | 1) => {
     setAnchor((prev) =>

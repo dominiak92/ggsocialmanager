@@ -80,6 +80,10 @@ export type PostType = {
   isActive: boolean
 }
 
+/** `code` wylicza repozytorium ze `slugify(name)`, jak przy kanałach. */
+export type PostTypeDraft = { name: string; color: string; sortOrder: number }
+export type PostTypePatch = Partial<PostTypeDraft & { isActive: boolean }>
+
 /**
  * Wpis w kalendarzu — jeden byt dla „zaplanowane" i „wrzucone".
  * Odhaczenie w siatce to zmiana `status`, nie nowy rekord.

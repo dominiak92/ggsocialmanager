@@ -2,6 +2,7 @@ import { BellOffIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
 
 import { ChannelDialog, type ChannelTarget } from '@/components/settings/channel-dialog'
+import { PostTypesCard } from '@/components/settings/post-types-card'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -142,6 +143,8 @@ export function SettingsPage() {
           </Card>
         ))
       )}
+
+      <PostTypesCard />
 
       <ChannelDialog
         target={target}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { dataProvider } from '@/data/provider'
+import { useCollection } from '@/hooks/use-collection'
 import type { PostType } from '@/domain/models'
 
 type State = {
@@ -9,7 +10,12 @@ type State = {
   loading: boolean
 }
 
-/** Słownik rodzajów postów — zmienia się rzadko, więc bez odświeżania. */
+/**
+ * Słownik rodzajów postów.
+ *
+ * `usePostTypes()` daje tylko AKTYWNE — kalendarz nie ma proponować rodzaju
+ * wycofanego z użycia. Pełną listę (do Ustawień) daje `usePostTypeAdmin`.
+ */
 export function usePostTypes(): State {
   const [postTypes, setPostTypes] = useState<PostType[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -22,7 +28,7 @@ export function usePostTypes(): State {
       .list()
       .then((items) => {
         if (!active) return
-        setPostTypes(items)
+        setPostTypes(items.filter((postType) => postType.isActive))
         setError(null)
       })
       .catch((cause: unknown) => {
@@ -38,4 +44,9 @@ export function usePostTypes(): State {
   }, [])
 
   return { postTypes, error, loading }
+}
+
+/** Pełna lista z CRUD-em — wyłącznie dla Ustawień. */
+export function usePostTypeAdmin() {
+  return useCollection(dataProvider.postTypes, (a, b) => a.sortOrder - b.sortOrder)
 }

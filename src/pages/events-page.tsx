@@ -1,6 +1,12 @@
-import { CalendarClockIcon, ExternalLinkIcon, MegaphoneIcon, PlusIcon } from 'lucide-react'
+import {
+  CalendarClockIcon,
+  ExternalLinkIcon,
+  MegaphoneIcon,
+  PlusIcon,
+  SpeakerIcon,
+} from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 
 import { EntityDialog } from '@/components/shared/entity-dialog'
 import { FilterChips } from '@/components/shared/filter-chips'
@@ -152,7 +158,7 @@ export function EventsPage() {
             const needsPromo = !past && promoCount === 0 && daysUntil <= event.promoLeadDays
 
             return (
-              <li key={event.id}>
+              <li key={event.id} className="flex items-stretch gap-2">
                 <button
                   type="button"
                   onClick={() => dialog.openEdit(event)}
@@ -204,6 +210,20 @@ export function EventsPage() {
                     </Badge>
                   </div>
                 </button>
+
+                {/* Domkniecie petli: z wydarzenia od razu do wpisu w kalendarzu,
+                    z gotowym powiazaniem. Bez tego trzeba bylo pamietac nazwe
+                    eventu i szukac jej w liscie rozwijanej po drugiej stronie. */}
+                {!past && (
+                  <Button asChild variant="outline" size="sm" className="shrink-0 self-center">
+                    <Link
+                      to={`/kalendarz?event=${event.id}&tytul=${encodeURIComponent(event.name)}`}
+                    >
+                      <SpeakerIcon />
+                      Zapowiedz
+                    </Link>
+                  </Button>
+                )}
               </li>
             )
           })}

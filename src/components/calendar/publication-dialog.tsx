@@ -44,7 +44,15 @@ import { cn } from '@/lib/utils'
  * sprawia, że TypeScript pilnuje, iż w trybie edycji wpis NA PEWNO jest.
  */
 export type PublicationTarget =
-  | { mode: 'create'; publishOn: string; channelId: string }
+  | {
+      mode: 'create'
+      publishOn: string
+      channelId: string
+      /** Wstepne powiazanie i tytul — z eventu, konkursu albo pomyslu. */
+      eventId?: string | null
+      contestId?: string | null
+      title?: string
+    }
   | { mode: 'edit'; publication: Publication }
 
 type Props = {
@@ -109,11 +117,11 @@ function initialForm(target: PublicationTarget): FormState {
     publishOn: target.publishOn,
     postTypeId: null,
     status: defaultStatus(target.publishOn),
-    title: '',
+    title: target.title ?? '',
     url: '',
     note: '',
-    eventId: null,
-    contestId: null,
+    eventId: target.eventId ?? null,
+    contestId: target.contestId ?? null,
   }
 }
 

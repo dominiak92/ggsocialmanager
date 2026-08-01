@@ -22,6 +22,8 @@ import type {
   IdeaDraft,
   IdeaPatch,
   PostType,
+  PostTypeDraft,
+  PostTypePatch,
   Publication,
   PublicationDraft,
   PublicationPatch,
@@ -65,7 +67,15 @@ export class ChannelInUseError extends Error {
 }
 
 export type PostTypeRepo = {
+  /** Wszystkie rodzaje, także wyłączone — potrzebne w Ustawieniach. */
   list(): Promise<PostType[]>
+  create(draft: PostTypeDraft): Promise<PostType>
+  update(id: string, patch: PostTypePatch): Promise<PostType>
+  /**
+   * Kasowanie jest bezpieczne: `publications.post_type_id` ma
+   * `on delete set null`, więc wpisy zostają, tracąc tylko rodzaj.
+   */
+  remove(id: string): Promise<void>
 }
 
 export type PublicationRepo = {

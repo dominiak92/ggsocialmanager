@@ -23,6 +23,12 @@ type Props = {
   icon: LucideIcon
   to: string
   count: number
+  /**
+   * Ile pozycji naprawde wymaga reakcji. Gdy lista pokazuje szerszy kontekst
+   * (np. wszystkie nadchodzace wydarzenia), plakietka ma liczyc tylko te
+   * pilne — inaczej karta krzyczy na czerwono o czyms, co jest w porzadku.
+   */
+  alertCount?: number
   loading?: boolean
   emptyText?: string
   /**
@@ -55,6 +61,7 @@ export function SignalCard({
   icon: Icon,
   to,
   count,
+  alertCount,
   loading = false,
   emptyText,
   tone = 'alert',
@@ -64,6 +71,7 @@ export function SignalCard({
 }: Props) {
   const rows = Children.toArray(children)
   const hidden = rows.length - VISIBLE_ROWS
+  const badge = alertCount ?? count
 
   if (hideWhenEmpty && !loading && count === 0) return null
 
@@ -76,9 +84,14 @@ export function SignalCard({
             {title}
           </Link>
           {headerBadge ??
-            (count > 0 && (
-              <Badge variant={tone === 'alert' ? 'destructive' : 'secondary'} className="ml-auto">
-                {count}
+            (badge > 0 && (
+              <Badge
+                variant={
+                  tone === 'alert' && (alertCount ?? count) > 0 ? 'destructive' : 'secondary'
+                }
+                className="ml-auto"
+              >
+                {badge}
               </Badge>
             ))}
         </CardTitle>

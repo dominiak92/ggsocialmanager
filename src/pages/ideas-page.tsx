@@ -1,5 +1,6 @@
-import { LightbulbIcon, MessageSquareIcon, PlusIcon } from 'lucide-react'
+import { CalendarPlusIcon, LightbulbIcon, MessageSquareIcon, PlusIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router'
 
 import { EntityDialog } from '@/components/shared/entity-dialog'
 import { Field, NoteField, TextField } from '@/components/shared/field'
@@ -110,7 +111,7 @@ export function IdeasPage() {
       ) : (
         <ul className="space-y-2">
           {visible.map((idea) => (
-            <li key={idea.id}>
+            <li key={idea.id} className="flex items-stretch gap-2">
               <button
                 type="button"
                 onClick={() => dialog.openEdit(idea)}
@@ -142,6 +143,18 @@ export function IdeasPage() {
                   {IDEA_KIND_LABEL[idea.kind]}
                 </Badge>
               </button>
+
+              {/* Pomysl ma trafic do kalendarza jednym klikniecem — inaczej
+                  lista pomyslow zyje wlasnym zyciem obok planu publikacji
+                  i nikt do niej nie wraca. */}
+              {(idea.status === 'new' || idea.status === 'doing') && (
+                <Button asChild variant="outline" size="sm" className="shrink-0 self-center">
+                  <Link to={`/kalendarz?tytul=${encodeURIComponent(idea.title)}`}>
+                    <CalendarPlusIcon />
+                    Zaplanuj
+                  </Link>
+                </Button>
+              )}
             </li>
           ))}
         </ul>

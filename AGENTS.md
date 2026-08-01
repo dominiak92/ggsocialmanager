@@ -241,7 +241,11 @@ z Git Basha, nie z PowerShella.
   Startowo: produkt, news, lifestyle, tips & tricks, współpraca, event, artykuł,
   meme, konkurs. `color` to nazwa palety; na klasę CSS zamienia ją
   `postTypeColorClass` — **nie składaj klas Tailwinda ze stringów**
-  (`bg-${color}-500` nie zostanie wygenerowane).
+  (`bg-${color}-500` nie zostanie wygenerowane). Słownik jest edytowalny
+  w Ustawieniach (`PostTypesCard`). Kasowanie rodzaju jest bezpieczne
+  (`publications.post_type_id` ma `on delete set null`, więc wpisy zostają),
+  ale operacją domyślną jest WYŁĄCZENIE: rodzaj znika z formularza nowego
+  wpisu, a kolory na starych wpisach się nie rozjeżdżają.
 - **Publikacja** (`publications`) — JEDEN byt na „zaplanowane" i „wrzucone".
   Odhaczenie w kalendarzu to zmiana `status` z `planned` na `published`, nie
   osobna tabela. Dzięki temu ta sama siatka służy do planowania w przód i do
@@ -355,6 +359,41 @@ supabase/migrations/    # zmiany schematu `ggsm` (nigdy `public`)
 | `/pomysly`    | Pomysły i tematy do przegadania                                   |
 | `/ustawienia` | Dodawanie, edycja i wyłączanie kanałów                            |
 
+## Pulpit — dwie warstwy
+
+1. **„Dziś"** (`TodayCard`) na górze: co zapisane na dzisiaj i co już poszło,
+   z JEDNOKLIKNIĘCIOWYM odhaczeniem. To najczęstsza czynność w całej aplikacji
+   i nie może wymagać otwierania dialogu. Wcześniej pulpit odpowiadał wyłącznie
+   na „co mi umknęło", a dzień zaczyna się od „co mam dziś".
+2. **Sygnały** — karty tego, co umyka.
+
+**Nie przywracaj zbiorczego licznika „N rzeczy wymaga uwagi".** Przy 38
+zawodnikach bez ani jednego przeglądu pokazywał ~55 i przestawał znaczyć
+cokolwiek. Każda karta niesie własny licznik, a `alertCount` pozwala liczyć
+tylko pozycje pilne, gdy lista pokazuje szerszy kontekst (karta wydarzeń
+wypisuje cały horyzont, ale na czerwono liczy wyłącznie te bez zapowiedzi).
+
+**Wydarzenia mają JEDNĄ kartę.** Wcześniej „Najbliższe wydarzenia" i „Eventy
+bez zapowiedzi" stały obok siebie, a druga była podzbiorem pierwszej — te same
+nazwy dwa razy do przeczytania.
+
+## Przechodzenie między widokami
+
+Listy domenowe prowadzą do kalendarza deep-linkami, żeby nie trzeba było
+pamiętać nazwy i szukać jej w liście rozwijanej po drugiej stronie:
+
+| Skąd                               | Adres                                   | Efekt                                 |
+| ---------------------------------- | --------------------------------------- | ------------------------------------- |
+| Pulpit → „Dziś"                    | `/kalendarz?dzien=YYYY-MM-DD`           | otwiera panel dnia                    |
+| Event → „Zapowiedz"                | `/kalendarz?event=<id>&tytul=<nazwa>`   | formularz wpisu z gotowym powiązaniem |
+| Konkurs → „Zapowiedz"              | `/kalendarz?konkurs=<id>&tytul=<nazwa>` | jw.                                   |
+| Pomysł → „Zaplanuj"                | `/kalendarz?tytul=<tytuł>`              | formularz z wypełnionym tytułem       |
+| Gala zewnętrzna → „Dodaj u siebie" | `/eventy?dodaj=<nazwa>&data=<data>`     | formularz eventu                      |
+
+Wszystkie **czyszczą parametry po otwarciu** (`setParams({}, { replace: true })`),
+żeby odświeżenie strony nie otwierało dialogu po raz drugi. Żaden z nich nie
+zapisuje nic sam — otwiera wypełniony formularz i czeka na decyzję.
+
 ## Sygnały na pulpicie
 
 Wszystkie liczy `domain/reminders.ts` (czyste funkcje, „dziś" wstrzykiwane
@@ -389,8 +428,10 @@ Nowe formularze buduj na `components/shared/entity-dialog.tsx`
 przy zmianie treści, a przyciski uciekają spod kursora.
 
 Listy CRUD-owe idą przez `hooks/use-collection.ts` (`useCollection`) spięty
-w `hooks/use-domain.ts`. Cztery listy robiły dokładnie to samo, więc jest jeden
-hook sparametryzowany repozytorium — nie dopisuj piątej kopii.
+w `hooks/use-domain.ts`, a **rusztowanie dialogu formularza przez
+`hooks/use-entity-form.ts` (`useEntityForm`)** — stan formularza, `openCreate`,
+`openEdit`, `save`, `removeCurrent` i `patch`. Pięć list korzysta już z obu;
+nie dopisuj szóstej kopii ręcznie.
 
 **Ikony marek:** `lucide-react` 1.x NIE MA ikon Instagrama, Facebooka ani
 innych logotypów — usunięto je z pakietu. Nasze siedzą jako inline SVG

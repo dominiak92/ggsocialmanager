@@ -32,6 +32,7 @@ import type {
   AthletePatch,
   ContestPatch,
   IdeaPatch,
+  PostTypePatch,
   PublicationDraft,
   PublicationPatch,
   SportEventPatch,
@@ -137,17 +138,63 @@ const channels: ChannelRepo = {
   },
 }
 
+function postTypeRow(patch: PostTypePatch) {
+  return {
+    ...(patch.name === undefined ? {} : { name: patch.name }),
+    ...(patch.color === undefined ? {} : { color: patch.color }),
+    ...(patch.sortOrder === undefined ? {} : { sort_order: patch.sortOrder }),
+    ...(patch.isActive === undefined ? {} : { is_active: patch.isActive }),
+  }
+}
+
 const postTypes: PostTypeRepo = {
   async list() {
     const { data, error } = await supabase
       .from('post_types')
       .select('*')
-      .eq('is_active', true)
       .order('sort_order', { ascending: true })
 
     if (error) fail('Nie udało się pobrać rodzajów postów', error.message)
 
     return (data ?? []).map(toPostType)
+  },
+
+  async create(draft) {
+    const { data, error } = await supabase
+      .from('post_types')
+      .insert({
+        ...postTypeRow(draft),
+        name: draft.name,
+        code: slugify(draft.name) || `rodzaj-${Date.now().toString(36)}`,
+      })
+      .select('*')
+      .single()
+
+    if (error?.code === '23505') {
+      fail('Nie udało się dodać rodzaju', 'Rodzaj o tak podobnej nazwie już istnieje.')
+    }
+    if (error) fail('Nie udało się dodać rodzaju', error.message)
+
+    return toPostType(data)
+  },
+
+  async update(id, patch) {
+    const { data, error } = await supabase
+      .from('post_types')
+      .update(postTypeRow(patch))
+      .eq('id', id)
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się zapisać rodzaju', error.message)
+
+    return toPostType(data)
+  },
+
+  async remove(id) {
+    const { error } = await supabase.from('post_types').delete().eq('id', id)
+
+    if (error) fail('Nie udało się usunąć rodzaju', error.message)
   },
 }
 
