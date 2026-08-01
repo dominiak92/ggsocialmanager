@@ -16,16 +16,16 @@ w którym widać: co i gdzie poszło, co jeszcze nie poszło, i co zaraz umknie.
 Zrobione: **kroki 1–2** — kanały, rodzaje postów, publikacje i kalendarz
 (widok tygodnia + miesiąca). Reszta planu:
 
-| #   | Krok                                                        | Status       |
-| --- | ----------------------------------------------------------- | ------------ |
-| 1   | Kanały, rodzaje postów, publikacje                          | gotowe       |
-| 2   | Kalendarz: tydzień (siatka pokrycia) + miesiąc + panel dnia | gotowe       |
-| 3   | Eventy (zawody, gale MMA, campy) + wskaźnik nagłośnienia    | do zrobienia |
-| 4   | Konkursy: pipeline do zamknięcia, zwycięzca, adres wysyłki  | do zrobienia |
-| 5   | Zawodnicy sponsorowani + log przeglądów profili             | do zrobienia |
-| 6   | Pomysły i „do przegadania"                                  | do zrobienia |
-| 7   | Pulpit z **wyliczanymi** przypomnieniami                    | do zrobienia |
-| 8   | Filtry, szybkie dodawanie, szlify mobilne                   | do zrobienia |
+| #   | Krok                                                        | Status                                  |
+| --- | ----------------------------------------------------------- | --------------------------------------- |
+| 1   | Kanały, rodzaje postów, publikacje                          | gotowe                                  |
+| 2   | Kalendarz: tydzień (siatka pokrycia) + miesiąc + panel dnia | gotowe                                  |
+| 3   | Eventy (zawody, gale MMA, campy) + wskaźnik nagłośnienia    | do zrobienia                            |
+| 4   | Konkursy: pipeline do zamknięcia, zwycięzca, adres wysyłki  | do zrobienia                            |
+| 5   | Zawodnicy sponsorowani + log przeglądów profili             | do zrobienia                            |
+| 6   | Pomysły i „do przegadania"                                  | do zrobienia                            |
+| 7   | Pulpit z **wyliczanymi** przypomnieniami                    | częściowo — działa sygnał „cichy kanał" |
+| 8   | Filtry, szybkie dodawanie, szlify mobilne                   | do zrobienia                            |
 
 **Przypomnienia mają być wyliczane z danych, nie wpisywane ręcznie.** Lista,
 o której trzeba pamiętać, żeby ją uzupełnić, nie chroni przed zapomnieniem.
@@ -96,6 +96,16 @@ npm run verify      # typecheck + lint + test + build — odpal przed każdym co
    jeśli ta komenda nie przechodzi. Wklej output, jeśli coś pada.
 2. **Nowe komponenty shadcn dodawaj CLI, nie ręcznie:** `npx shadcn@latest add <nazwa>`.
    Ręczne przepisywanie z dokumentacji rozjeżdża wersje i zależności.
+   **PUŁAPKA:** styl `radix-nova` jest generowany pod Radix 1.7 (na razie tylko
+   wersje RC), który wystawia atrybuty `data-open` / `data-checked` / `data-active`.
+   Zainstalowany, najnowszy STABILNY Radix 1.6 wystawia `data-state="open"` itd.
+   Mapowanie obu form siedzi w `src/index.css` (blok `@custom-variant`) — bez
+   niego przełączniki są bez tła, aktywna zakładka bez podświetlenia, a dialogi
+   bez animacji. Objaw jest **czysto wizualny**, więc typecheck i testy
+   przechodzą jak gdyby nigdy nic. Jeśli nowy komponent używa kolejnego wariantu
+   `data-*`, dopisz go tam. Uwaga na składnię: forma z przecinkiem
+   (`@custom-variant x (&[a], &[b])`) gubi prefiks klasy i generuje selektor
+   globalny — musi być forma blokowa z `@slot`.
 3. **Nie edytuj `src/components/ui/*` „kosmetycznie".** To wygenerowany kod shadcn.
    Zmieniaj go tylko celowo (wtedy opisz zmianę) — inaczej trudno go zaktualizować.
 4. **Importy przez alias `@/`**, nie przez `../../..`. Alias jest w `tsconfig.json`,
@@ -208,11 +218,19 @@ z Git Basha, nie z PowerShella.
 
 ## Model domenowy
 
-- **Kanał** (`channels`) = platforma + rynek, np. Fanpage FB / CZ. Jest ich 16
+- **Kanał** (`channels`) = platforma + rynek, np. Fanpage FB / CZ. Startowo 16
   (grupa FB, 6 fanpage'y, 5 Instagramów, TikTok, YouTube, Newsletter,
-  Akademia/Sklep/Blog jako JEDEN kanał). `code` (`fb-pl`, `ig-cz`, ...) to
-  stabilny klucz seedów — nie zmieniaj go. **Kanałów się nie kasuje**, bo
-  osierociłyby publikacje; wyłącza się je przez `is_active` w Ustawieniach.
+  Akademia/Sklep/Blog jako JEDEN kanał), ale listę da się edytować z Ustawień.
+  `code` (`fb-pl`, `ig-cz`, ...) to stabilny klucz seedów — nie zmieniaj go;
+  dla nowych kanałów wylicza go `slugify(name)`, a o unikalność dba `unique`
+  w bazie (kod `23505` mapujemy na czytelny komunikat).
+  **Kanał z publikacjami jest nieusuwalny** — chroni go klucz obcy
+  (`on delete restrict`), a repo zamienia błąd `23503` na `ChannelInUseError`.
+  Domyślną operacją jest **wyłączenie** (`is_active`), nie kasowanie.
+- **Próg ciszy** (`channels.reminder_after_days`) — po ilu dniach bez
+  publikacji kanał upomina się na pulpicie. Per kanał, bo rytmy są różne:
+  Instagram milczący 3 dni to problem, newsletter co 30 dni to norma. `0`
+  wyłącza przypominanie dla kanału.
 - **Rodzaj postu** (`post_types`) — słownik, nie enum, bo lista będzie rosła.
   Startowo: produkt, news, lifestyle, tips & tricks, współpraca, event, artykuł,
   meme, konkurs. `color` to nazwa palety; na klasę CSS zamienia ją
@@ -232,6 +250,25 @@ z Git Basha, nie z PowerShella.
 w kodzie składa `toDateKey()` z lokalnych komponentów. **Nigdy nie używaj
 `toISOString()`** do klucza dnia — konwersja do UTC przesuwa wieczorne wpisy na
 poprzedni dzień. Cała arytmetyka kalendarza siedzi w `lib/dates.ts` i ma testy.
+
+**Przypomnienia liczy `domain/reminders.ts`** — czysta funkcja z wstrzykiwanym
+„dziś", więc da się ją przetestować. Nowy sygnał dopisuj tam, nie w komponencie.
+Do liczenia ciszy bierzemy wyłącznie wpisy `published`: zaplanowany post
+niczego jeszcze nie odtrąbił.
+
+## Siatka kalendarza — dlaczego tak
+
+Siatka tygodnia ma **stałą wysokość komórek** (`h-[3.25rem]`) i pokazuje
+maksymalnie 2 wpisy, resztę chowając pod „+N więcej" (otwiera panel dnia).
+Tabela jest `table-fixed` z jawnym `<colgroup>`. To nie jest kosmetyka:
+bez tych trzech rzeczy jeden dzień z pięcioma wpisami rozpychał rząd, a długi
+tytuł zmieniał szerokość kolumny — siatka „skakała" przy każdym dodaniu.
+**Nie zdejmuj limitu ani `table-fixed`** w imię pokazania kompletu; komplet
+jest w panelu dnia. Ten widok ma pokazywać DZIURY, nie detale.
+
+Dialogi z formularzem mają `max-h-[85dvh]` i przewijany środek (nagłówek
+i stopka stoją). Bez tego okno rosło i kurczyło się przy zmianie treści,
+a przyciski uciekały spod kursora.
 
 ## Struktura
 

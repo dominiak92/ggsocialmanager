@@ -41,6 +41,7 @@ export type Database = {
           locale: string | null
           name: string
           platform: string
+          reminder_after_days: number
           sort_order: number
           updated_at: string
         }
@@ -52,6 +53,7 @@ export type Database = {
           locale?: string | null
           name: string
           platform: string
+          reminder_after_days?: number
           sort_order?: number
           updated_at?: string
         }
@@ -63,6 +65,7 @@ export type Database = {
           locale?: string | null
           name?: string
           platform?: string
+          reminder_after_days?: number
           sort_order?: number
           updated_at?: string
         }

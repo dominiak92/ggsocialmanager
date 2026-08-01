@@ -8,6 +8,8 @@
  */
 import type {
   Channel,
+  ChannelDraft,
+  ChannelPatch,
   HealthCheck,
   PostType,
   Publication,
@@ -31,8 +33,22 @@ export type HealthRepo = {
 export type ChannelRepo = {
   /** Wszystkie kanały w kolejności wyświetlania (także wyłączone). */
   list(): Promise<Channel[]>
-  /** Włączenie/wyłączenie kanału — kanałów nie kasujemy, bo osierocą wpisy. */
-  setActive(id: string, isActive: boolean): Promise<void>
+  create(draft: ChannelDraft): Promise<Channel>
+  update(id: string, patch: ChannelPatch): Promise<Channel>
+  /**
+   * Usuwa kanał. Rzuca `ChannelInUseError`, gdy ma publikacje — baza broni
+   * tego kluczem obcym (`on delete restrict`), żeby nie osierocić wpisów.
+   * Wtedy właściwą operacją jest wyłączenie (`update({ isActive: false })`).
+   */
+  remove(id: string): Promise<void>
+}
+
+/** Kanał ma publikacje i nie da się go skasować — trzeba go wyłączyć. */
+export class ChannelInUseError extends Error {
+  constructor() {
+    super('Ten kanał ma zapisane publikacje, więc nie można go usunąć. Wyłącz go zamiast tego.')
+    this.name = 'ChannelInUseError'
+  }
 }
 
 export type PostTypeRepo = {
@@ -42,6 +58,12 @@ export type PostTypeRepo = {
 export type PublicationRepo = {
   /** Wpisy z zakresu dat — pod widok tygodnia i miesiąca. */
   listRange(range: DateRange): Promise<Publication[]>
+  /**
+   * Data ostatniej OPUBLIKOWANEJ pozycji per kanał, nie starsza niż `since`.
+   * Pod przypomnienia o ciszy — plany się nie liczą, bo zaplanowany post
+   * niczego jeszcze nie odtrąbił.
+   */
+  lastPublishedPerChannel(since: string): Promise<Map<string, string>>
   create(draft: PublicationDraft): Promise<Publication>
   update(id: string, patch: PublicationPatch): Promise<Publication>
   remove(id: string): Promise<void>

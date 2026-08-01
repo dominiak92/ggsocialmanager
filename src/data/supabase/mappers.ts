@@ -30,6 +30,7 @@ export function toChannel(row: Tables['channels']['Row']): Channel {
     locale: (row.locale as Locale | null) ?? null,
     sortOrder: row.sort_order,
     isActive: row.is_active,
+    reminderAfterDays: row.reminder_after_days,
   }
 }
 

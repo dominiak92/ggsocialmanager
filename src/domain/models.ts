@@ -42,7 +42,23 @@ export type Channel = {
   locale: Locale | null
   sortOrder: number
   isActive: boolean
+  /**
+   * Po ilu dniach bez publikacji kanał ma się upomnieć na pulpicie.
+   * `0` = nie przypominaj. Per kanał, bo newsletter i Instagram mają
+   * zupełnie inne rytmy.
+   */
+  reminderAfterDays: number
 }
+
+/** Dane nowego kanału; `code` wyliczamy z nazwy, `sortOrder` z platformy. */
+export type ChannelDraft = {
+  name: string
+  platform: Platform
+  locale: Locale | null
+  reminderAfterDays: number
+}
+
+export type ChannelPatch = Partial<ChannelDraft & { isActive: boolean }>
 
 /** Rodzaj treści (produkt, news, meme, ...) — słownik edytowalny z panelu. */
 export type PostType = {

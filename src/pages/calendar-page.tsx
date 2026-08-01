@@ -144,6 +144,7 @@ export function CalendarPage() {
             setTarget({ mode: 'create', publishOn: dateKey, channelId })
           }
           onOpen={(publication) => setTarget({ mode: 'edit', publication })}
+          onOpenDay={setOpenDay}
         />
       ) : (
         <MonthGrid

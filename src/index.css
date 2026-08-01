@@ -3,6 +3,92 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ---------------------------------------------------------------------------
+ * ZGODNOŚĆ shadcn ↔ Radix — nie usuwaj bez sprawdzenia.
+ *
+ * Styl `radix-nova` w shadcn jest generowany pod Radix 1.7 (na razie tylko
+ * wersje RC), który wystawia atrybuty `data-open`, `data-checked` itd.
+ * Zainstalowany, najnowszy STABILNY Radix 1.6 wystawia zamiast tego
+ * `data-state="open" | "checked" | "active"`.
+ *
+ * Bez tego mapowania warianty `data-open:` / `data-checked:` / `data-active:`
+ * w `components/ui/*` nie trafiają w nic: przełączniki są bez tła, aktywna
+ * zakładka bez podświetlenia, dialogi bez animacji. Objaw jest czysto
+ * wizualny, więc nic nie krzyczy — TypeScript i testy przechodzą.
+ *
+ * Każdy wariant celuje w OBIE formy, więc po wyjściu Radiksa 1.7 to nadal
+ * działa i można ten blok po prostu usunąć.
+ *
+ * UWAGA na składnię: forma z przecinkiem — `@custom-variant x (&[a], &[b])` —
+ * gubi prefiks klasy przy pierwszym selektorze i generuje goły `[data-state=…]`,
+ * który trafia w KAŻDY pasujący element na stronie. Musi być forma blokowa
+ * z `@slot`.
+ * ------------------------------------------------------------------------ */
+@custom-variant data-open {
+  &[data-state='open'] {
+    @slot;
+  }
+  &[data-open] {
+    @slot;
+  }
+}
+@custom-variant data-closed {
+  &[data-state='closed'] {
+    @slot;
+  }
+  &[data-closed] {
+    @slot;
+  }
+}
+@custom-variant data-active {
+  &[data-state='active'] {
+    @slot;
+  }
+  &[data-active] {
+    @slot;
+  }
+}
+@custom-variant data-inactive {
+  &[data-state='inactive'] {
+    @slot;
+  }
+  &[data-inactive] {
+    @slot;
+  }
+}
+@custom-variant data-checked {
+  &[data-state='checked'] {
+    @slot;
+  }
+  &[data-checked] {
+    @slot;
+  }
+}
+@custom-variant data-unchecked {
+  &[data-state='unchecked'] {
+    @slot;
+  }
+  &[data-unchecked] {
+    @slot;
+  }
+}
+@custom-variant data-horizontal {
+  &[data-orientation='horizontal'] {
+    @slot;
+  }
+  &[data-horizontal] {
+    @slot;
+  }
+}
+@custom-variant data-vertical {
+  &[data-orientation='vertical'] {
+    @slot;
+  }
+  &[data-vertical] {
+    @slot;
+  }
+}
+
 /* Tailwind v4 nie ma pliku konfiguracyjnego — tokeny żyją tutaj.
    Nie twórz `tailwind.config.js`. Patrz AGENTS.md → „Style". */
 @theme inline {

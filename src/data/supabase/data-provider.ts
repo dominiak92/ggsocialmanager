@@ -4,15 +4,18 @@
  * To JEDYNY katalog w projekcie, który importuje klienta Supabase.
  * Jeśli piszesz `from '@/lib/supabase'` gdziekolwiek indziej — robisz to źle.
  */
-import type {
-  ChannelRepo,
-  DataProvider,
-  HealthRepo,
-  PostTypeRepo,
-  PublicationRepo,
+import {
+  ChannelInUseError,
+  type ChannelRepo,
+  type DataProvider,
+  type HealthRepo,
+  type PostTypeRepo,
+  type PublicationRepo,
 } from '@/data/interfaces'
 import { toChannel, toHealthCheck, toPostType, toPublication } from '@/data/supabase/mappers'
+import type { Platform } from '@/domain/enums'
 import type { PublicationDraft, PublicationPatch } from '@/domain/models'
+import { slugify } from '@/lib/slug'
 import { supabase } from '@/lib/supabase'
 
 /** Jednolity komunikat błędu — bez tego każdy błąd wygląda inaczej w UI. */
@@ -35,6 +38,17 @@ const health: HealthRepo = {
   },
 }
 
+/** Kolejność sekcji w siatce — nowy kanał ląduje na końcu swojej platformy. */
+const PLATFORM_SORT_BASE: Record<Platform, number> = {
+  facebook_group: 10,
+  facebook_page: 20,
+  instagram: 30,
+  tiktok: 40,
+  youtube: 50,
+  newsletter: 60,
+  web: 70,
+}
+
 const channels: ChannelRepo = {
   async list() {
     const { data, error } = await supabase
@@ -48,10 +62,57 @@ const channels: ChannelRepo = {
     return (data ?? []).map(toChannel)
   },
 
-  async setActive(id, isActive) {
-    const { error } = await supabase.from('channels').update({ is_active: isActive }).eq('id', id)
+  async create(draft) {
+    const { data, error } = await supabase
+      .from('channels')
+      .insert({
+        code: slugify(draft.name) || `kanal-${Date.now().toString(36)}`,
+        name: draft.name,
+        platform: draft.platform,
+        locale: draft.locale,
+        reminder_after_days: draft.reminderAfterDays,
+        // +9 trzyma nowy kanał w obrębie swojej sekcji, ale za tymi z seedu.
+        sort_order: PLATFORM_SORT_BASE[draft.platform] + 9,
+      })
+      .select('*')
+      .single()
 
-    if (error) fail('Nie udało się zmienić kanału', error.message)
+    // 23505 = naruszenie unikatu na `code`, czyli nazwa daje istniejący slug.
+    if (error?.code === '23505') {
+      fail('Nie udało się dodać kanału', 'Kanał o tak podobnej nazwie już istnieje.')
+    }
+    if (error) fail('Nie udało się dodać kanału', error.message)
+
+    return toChannel(data)
+  },
+
+  async update(id, patch) {
+    const { data, error } = await supabase
+      .from('channels')
+      .update({
+        ...(patch.name === undefined ? {} : { name: patch.name }),
+        ...(patch.platform === undefined ? {} : { platform: patch.platform }),
+        ...(patch.locale === undefined ? {} : { locale: patch.locale }),
+        ...(patch.isActive === undefined ? {} : { is_active: patch.isActive }),
+        ...(patch.reminderAfterDays === undefined
+          ? {}
+          : { reminder_after_days: patch.reminderAfterDays }),
+      })
+      .eq('id', id)
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się zapisać kanału', error.message)
+
+    return toChannel(data)
+  },
+
+  async remove(id) {
+    const { error } = await supabase.from('channels').delete().eq('id', id)
+
+    // 23503 = klucz obcy z `publications`. Baza celowo tego broni.
+    if (error?.code === '23503') throw new ChannelInUseError()
+    if (error) fail('Nie udało się usunąć kanału', error.message)
   },
 }
 
@@ -94,6 +155,25 @@ const publications: PublicationRepo = {
     if (error) fail('Nie udało się pobrać kalendarza', error.message)
 
     return (data ?? []).map(toPublication)
+  },
+
+  async lastPublishedPerChannel(since) {
+    const { data, error } = await supabase
+      .from('publications')
+      .select('channel_id, publish_on')
+      .eq('status', 'published')
+      .gte('publish_on', since)
+      .order('publish_on', { ascending: false })
+
+    if (error) fail('Nie udało się sprawdzić ciszy na kanałach', error.message)
+
+    // Posortowane malejąco, więc pierwszy trafiony wpis dla kanału jest
+    // najnowszy — kolejne pomijamy.
+    const latest = new Map<string, string>()
+    for (const row of data ?? []) {
+      if (!latest.has(row.channel_id)) latest.set(row.channel_id, row.publish_on)
+    }
+    return latest
   },
 
   async create(draft: PublicationDraft) {

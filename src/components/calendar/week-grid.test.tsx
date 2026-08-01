@@ -17,6 +17,7 @@ const channels: Channel[] = [
     locale: 'PL',
     sortOrder: 20,
     isActive: true,
+    reminderAfterDays: 3,
   },
   {
     id: 'ch-ig',
@@ -26,6 +27,7 @@ const channels: Channel[] = [
     locale: 'PL',
     sortOrder: 30,
     isActive: true,
+    reminderAfterDays: 3,
   },
 ]
 
@@ -50,6 +52,7 @@ function publication(overrides: Partial<Publication> = {}): Publication {
 function setup(publications: Publication[] = []) {
   const onAdd = vi.fn()
   const onOpen = vi.fn()
+  const onOpenDay = vi.fn()
   render(
     <WeekGrid
       days={days}
@@ -58,9 +61,10 @@ function setup(publications: Publication[] = []) {
       publications={publications}
       onAdd={onAdd}
       onOpen={onOpen}
+      onOpenDay={onOpenDay}
     />,
   )
-  return { onAdd, onOpen }
+  return { onAdd, onOpen, onOpenDay }
 }
 
 describe('WeekGrid', () => {
@@ -108,9 +112,27 @@ describe('WeekGrid', () => {
         publications={[]}
         onAdd={vi.fn()}
         onOpen={vi.fn()}
+        onOpenDay={vi.fn()}
       />,
     )
 
     expect(screen.getByText(/Wszystkie kanały są wyłączone/)).toBeInTheDocument()
+  })
+
+  it('nadmiar wpisów chowa pod „+N", żeby wiersz nie zmieniał wysokości', async () => {
+    const many = [
+      publication({ id: 'a', title: 'Pierwszy' }),
+      publication({ id: 'b', title: 'Drugi' }),
+      publication({ id: 'c', title: 'Trzeci' }),
+      publication({ id: 'd', title: 'Czwarty' }),
+    ]
+    const { onOpenDay } = setup(many)
+
+    expect(screen.getByRole('button', { name: /Pierwszy/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Trzeci/ })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: '+2 więcej' }))
+
+    expect(onOpenDay).toHaveBeenCalledWith('2026-08-05')
   })
 })

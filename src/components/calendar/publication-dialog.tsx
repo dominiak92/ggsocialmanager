@@ -157,13 +157,18 @@ export function PublicationDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      {/* Stała wysokość: nagłówek i stopka stoją, przewija się tylko środek.
+          Bez tego dialog rósł i kurczył się przy zmianie treści (inna liczba
+          rodzajów, dłuższa notatka), przez co przyciski skakały pod kursorem. */}
+      <DialogContent className="flex max-h-[85dvh] flex-col gap-0 sm:max-w-lg">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{isEdit ? 'Edytuj wpis' : 'Nowy wpis'}</DialogTitle>
-          <DialogDescription>{formatDayLong(fromDateKey(form.publishOn))}</DialogDescription>
+          <DialogDescription className="capitalize">
+            {formatDayLong(fromDateKey(form.publishOn))}
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-4">
           <div className="space-y-2">
             <Label htmlFor="channel">Kanał</Label>
             <Select value={form.channelId} onValueChange={(value) => patch({ channelId: value })}>
@@ -253,7 +258,7 @@ export function PublicationDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:justify-between">
+        <DialogFooter className="shrink-0 gap-2 sm:justify-between">
           {isEdit ? (
             <Button variant="ghost" onClick={remove} disabled={saving} className="text-destructive">
               <Trash2Icon />

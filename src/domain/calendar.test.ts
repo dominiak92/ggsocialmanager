@@ -26,6 +26,7 @@ function channel(overrides: Partial<Channel>): Channel {
     locale: 'PL',
     sortOrder: 0,
     isActive: true,
+    reminderAfterDays: 7,
     ...overrides,
   }
 }

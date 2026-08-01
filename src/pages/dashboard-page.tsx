@@ -1,67 +1,97 @@
-import { CheckCircle2Icon, DatabaseIcon, XCircleIcon } from 'lucide-react'
+import { BellRingIcon, CheckCircle2Icon, VolumeXIcon } from 'lucide-react'
+import { Link } from 'react-router'
 
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useHealth } from '@/hooks/use-health'
+import { useChannels } from '@/hooks/use-channels'
+import { useSilentChannels } from '@/hooks/use-silent-channels'
 
 /**
- * Pulpit. Na razie ma jedno zadanie: pokazać, że aplikacja NAPRAWDĘ czyta
- * z bazy (a nie renderuje zaślepki). Gdy dojdzie właściwa domena, ta karta
- * zostaje jako sonda albo znika — nic od niej nie zależy.
+ * Pulpit = przypomnienia. Sygnały są WYLICZANE z danych, nie wpisywane
+ * ręcznie — lista, o której trzeba pamiętać, żeby ją uzupełnić, nie chroni
+ * przed zapomnieniem.
+ *
+ * Na razie jest tu jeden sygnał (cisza na kanale). Kolejne (eventy bez
+ * nagłośnienia, konkursy do zamknięcia, zawodnicy bez przeglądu) dochodzą
+ * w krokach 3–5.
  */
 export function DashboardPage() {
-  const { data, error, loading } = useHealth()
+  const { channels, loading: channelsLoading } = useChannels()
+  const { silent, error, loading } = useSilentChannels(channels)
+
+  const busy = channelsLoading || loading
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">Pulpit</h1>
-        <p className="text-muted-foreground">
-          Fundament projektu — aplikacja, baza i deploy są spięte. Model domenowy dopiszemy przy
-          pierwszej funkcji.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">Pulpit</h1>
+        <p className="text-muted-foreground text-sm">Co się upomina i czego brakuje.</p>
       </div>
+
+      {error && (
+        <p className="border-destructive/40 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
+          {error}
+        </p>
+      )}
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DatabaseIcon className="size-4" />
-            Połączenie z Supabase
+            <BellRingIcon className="size-4" />
+            Ciche kanały
           </CardTitle>
           <CardDescription>
-            Odczyt z tabeli <code className="text-xs">ggsm.app_health</code> przez warstwę
-            repozytoriów.
+            Każdy kanał ma własny próg — Instagram milczący 3 dni to problem, newsletter co 30 dni
+            to norma. Progi zmienisz w Ustawieniach.
           </CardDescription>
         </CardHeader>
+
         <CardContent>
-          {loading ? (
+          {busy ? (
             <div className="space-y-2">
-              <Skeleton className="h-6 w-40" />
-              <Skeleton className="h-4 w-64" />
+              {Array.from({ length: 3 }, (_, index) => (
+                <Skeleton key={index} className="h-10 w-full" />
+              ))}
             </div>
-          ) : error ? (
-            <div className="space-y-2">
-              <Badge variant="destructive" className="gap-1">
-                <XCircleIcon className="size-3" />
-                Brak połączenia
-              </Badge>
-              <p className="text-muted-foreground text-sm">{error}</p>
+          ) : silent.length === 0 ? (
+            <div className="text-muted-foreground flex items-center gap-2 py-2 text-sm">
+              <CheckCircle2Icon className="text-primary size-4" />
+              Żaden kanał nie przekroczył swojego progu ciszy.
             </div>
           ) : (
-            <div className="space-y-2">
-              <Badge className="gap-1">
-                <CheckCircle2Icon className="size-3" />
-                Połączono
-              </Badge>
-              <p className="text-muted-foreground text-sm">
-                {data?.label ?? 'Brak wpisu sondy'}
-                {data ? ` — odczyt z ${new Date(data.checkedAt).toLocaleString('pl-PL')}` : ''}
-              </p>
-            </div>
+            <ul className="divide-y">
+              {silent.map(({ channel, daysSince, lastPublishedOn }) => (
+                <li key={channel.id} className="flex items-center gap-3 py-2.5">
+                  <VolumeXIcon className="text-muted-foreground size-4 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{channel.name}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {daysSince === null
+                        ? 'nic nie było wrzucane'
+                        : `ostatnio ${daysSince} dni temu (${lastPublishedOn})`}
+                      {` · próg ${channel.reminderAfterDays} dn.`}
+                    </p>
+                  </div>
+                  <Badge variant={daysSince === null ? 'destructive' : 'secondary'}>
+                    {daysSince === null ? 'nigdy' : `${daysSince} dni`}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
           )}
         </CardContent>
       </Card>
+
+      <div className="flex flex-wrap gap-2">
+        <Button asChild>
+          <Link to="/kalendarz">Otwórz kalendarz</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/ustawienia">Ustawienia kanałów</Link>
+        </Button>
+      </div>
     </div>
   )
 }
