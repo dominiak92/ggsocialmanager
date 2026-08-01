@@ -116,11 +116,12 @@ export function toAthlete(row: Tables['athletes']['Row']): Athlete {
   return {
     id: row.id,
     name: row.name,
-    discipline: row.discipline,
+    disciplines: row.disciplines,
     instagramUrl: row.instagram_url,
-    otherUrl: row.other_url,
+    facebookUrl: row.facebook_url,
     checkEveryDays: row.check_every_days,
     isActive: row.is_active,
+    isStarred: row.is_starred,
     note: row.note,
   }
 }

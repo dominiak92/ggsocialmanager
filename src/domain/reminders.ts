@@ -183,7 +183,25 @@ export function athletesDue(
     })
     .filter((entry) => entry.overdueBy > 0)
     .toSorted((a, b) => {
+      // Gwiazdka wygrywa z przekroczeniem progu. Zawodnik oznaczony jako
+      // ważniejszy ma trafić na górę nawet wtedy, gdy ktoś inny jest zaległy
+      // o kilka dni dłużej — po to się go gwiazdkuje.
+      if (a.athlete.isStarred !== b.athlete.isStarred) return a.athlete.isStarred ? -1 : 1
       if (a.overdueBy !== b.overdueBy) return b.overdueBy - a.overdueBy
       return a.athlete.name.localeCompare(b.athlete.name, 'pl')
     })
+}
+
+/** Wszystkie sporty występujące na liście — do filtrów, posortowane po popularności. */
+export function disciplineTags(athletes: Athlete[]): { tag: string; count: number }[] {
+  const counts = new Map<string, number>()
+  for (const athlete of athletes) {
+    for (const tag of athlete.disciplines) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1)
+    }
+  }
+
+  return [...counts.entries()]
+    .map(([tag, count]) => ({ tag, count }))
+    .toSorted((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, 'pl'))
 }

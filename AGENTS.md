@@ -258,6 +258,17 @@ z Git Basha, nie z PowerShella.
   jest LOGIEM, nie kolumną „ostatnio sprawdzony": kolumna gubiłaby historię
   i nie dałoby się odróżnić kogoś zaniedbywanego od miesięcy od odwiedzonego
   wczoraj po długiej przerwie. `check_every_days` to rytm per zawodnik.
+  Historia jest widoczna w dialogu edycji **z możliwością cofnięcia** — bez tego
+  omyłkowe kliknięcie „Przejrzany" było nieodwracalne.
+- **Sporty zawodnika to TAGI** (`athletes.disciplines text[]`), nie jedna nazwa.
+  Realne dane są wielowartościowe („K1", „Muay Thai") i mieszają sport
+  z organizacją („MMA", „KSW", „UFC"). Przy jednym polu tekstowym filtr „MMA"
+  rozbiłby się na trzy osobne grupy zamiast złapać wszystkich. Lista filtruje
+  się po tych tagach, a `TagInput` podpowiada istniejące wartości — bez
+  podpowiedzi dane rozjeżdżają się na „BJJ" / „bjj" i filtr przestaje działać.
+- **Gwiazdka** (`athletes.is_starred`) — ważniejszy zawodnik. **Wygrywa
+  z przekroczeniem progu** przy sortowaniu (`athletesDue`), ale go NIE omija:
+  gwiazdkowany, który jest na bieżąco, nadal nie krzyczy.
 - **Pomysły** (`ideas`) — `kind` rozdziela pomysł od tematu „do przegadania",
   `status` i `priority` porządkują listę.
 
@@ -354,6 +365,16 @@ przy zmianie treści, a przyciski uciekają spod kursora.
 Listy CRUD-owe idą przez `hooks/use-collection.ts` (`useCollection`) spięty
 w `hooks/use-domain.ts`. Cztery listy robiły dokładnie to samo, więc jest jeden
 hook sparametryzowany repozytorium — nie dopisuj piątej kopii.
+
+**Ikony marek:** `lucide-react` 1.x NIE MA ikon Instagrama, Facebooka ani
+innych logotypów — usunięto je z pakietu. Nasze siedzą jako inline SVG
+w `components/shared/social-link.tsx`. Nie dokładaj biblioteki ikon dla dwóch
+symboli; dopisz kolejny glif tam. `SocialLink` robi `stopPropagation`, bo
+ikony stoją w wierszu, którego kliknięcie otwiera edycję.
+
+**Operacje niszczące wymagają potwierdzenia.** Kasowanie zawodnika (zabiera log
+przeglądów) i kanału idzie przez `AlertDialog`. Przy zawodniku podpowiadamy
+wyłączenie przełącznika „Aktywny" jako łagodniejszą alternatywę.
 
 ## Deploy
 

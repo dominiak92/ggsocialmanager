@@ -205,11 +205,12 @@ function contestRow(patch: ContestPatch) {
 function athleteRow(patch: AthletePatch) {
   return {
     ...(patch.name === undefined ? {} : { name: patch.name }),
-    ...(patch.discipline === undefined ? {} : { discipline: patch.discipline }),
+    ...(patch.disciplines === undefined ? {} : { disciplines: patch.disciplines }),
     ...(patch.instagramUrl === undefined ? {} : { instagram_url: patch.instagramUrl }),
-    ...(patch.otherUrl === undefined ? {} : { other_url: patch.otherUrl }),
+    ...(patch.facebookUrl === undefined ? {} : { facebook_url: patch.facebookUrl }),
     ...(patch.checkEveryDays === undefined ? {} : { check_every_days: patch.checkEveryDays }),
     ...(patch.isActive === undefined ? {} : { is_active: patch.isActive }),
+    ...(patch.isStarred === undefined ? {} : { is_starred: patch.isStarred }),
     ...(patch.note === undefined ? {} : { note: patch.note }),
   }
 }

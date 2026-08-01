@@ -150,12 +150,19 @@ export type ContestPatch = Partial<ContestDraft>
 export type Athlete = {
   id: string
   name: string
-  discipline: string
+  /**
+   * Sporty jako TAGI, nie jedna nazwa. Realne dane bywają wielowartościowe
+   * („K1", „Muay Thai") i mieszają sport z organizacją („MMA", „KSW") —
+   * przy jednym polu tekstowym filtr „MMA" rozjechałby się na trzy grupy.
+   */
+  disciplines: string[]
   instagramUrl: string
-  otherUrl: string
+  facebookUrl: string
   /** Co ile dni profil ma być przejrzany. `0` = nie przypominaj. */
   checkEveryDays: number
   isActive: boolean
+  /** Ważniejszy zawodnik — idzie na górę list i sygnałów. */
+  isStarred: boolean
   note: string
 }
 

@@ -5,6 +5,7 @@ import {
   athletesDue,
   contestsNeedingAction,
   eventPromo,
+  disciplineTags,
   eventsNeedingPromo,
   silentChannels,
 } from '@/domain/reminders'
@@ -145,11 +146,12 @@ function athlete(overrides: Partial<Athlete> = {}): Athlete {
   return {
     id: 'a1',
     name: 'Jan Kowalski',
-    discipline: 'BJJ',
+    disciplines: ['BJJ'],
     instagramUrl: '',
-    otherUrl: '',
+    facebookUrl: '',
     checkEveryDays: 7,
     isActive: true,
+    isStarred: false,
     note: '',
     ...overrides,
   }
@@ -290,5 +292,54 @@ describe('athletesDue', () => {
     )
 
     expect(result).toEqual([])
+  })
+})
+
+describe('athletesDue — gwiazdka', () => {
+  it('gwiazdkowany idzie na górę, choć jest mniej zaległy', () => {
+    const result = athletesDue(
+      [
+        athlete({ id: 'zwykly', name: 'Zwykły' }),
+        athlete({ id: 'wazny', name: 'Ważny', isStarred: true }),
+      ],
+      new Map([
+        ['zwykly', '2026-07-01'], // 50 dni ciszy
+        ['wazny', '2026-08-05'], // 15 dni ciszy
+      ]),
+      today,
+    )
+
+    expect(result.map((entry) => entry.athlete.id)).toEqual(['wazny', 'zwykly'])
+  })
+
+  it('gwiazdka nie omija progu — niezaległy gwiazdkowany nie krzyczy', () => {
+    const result = athletesDue(
+      [athlete({ isStarred: true })],
+      new Map([['a1', '2026-08-18']]), // 2 dni, próg 7
+      today,
+    )
+
+    expect(result).toEqual([])
+  })
+})
+
+describe('disciplineTags', () => {
+  it('zlicza tagi i sortuje po popularności', () => {
+    const result = disciplineTags([
+      athlete({ id: '1', disciplines: ['BJJ'] }),
+      athlete({ id: '2', disciplines: ['BJJ', 'MMA'] }),
+      athlete({ id: '3', disciplines: ['MMA', 'KSW'] }),
+      athlete({ id: '4', disciplines: ['MMA'] }),
+    ])
+
+    expect(result).toEqual([
+      { tag: 'MMA', count: 3 },
+      { tag: 'BJJ', count: 2 },
+      { tag: 'KSW', count: 1 },
+    ])
+  })
+
+  it('pomija zawodników bez sportów', () => {
+    expect(disciplineTags([athlete({ disciplines: [] })])).toEqual([])
   })
 })

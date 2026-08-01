@@ -161,6 +161,7 @@ export function DashboardPage() {
               }
               badge={daysSince === null ? 'nigdy' : `${daysSince} dni`}
               urgent={daysSince === null}
+              starred={athlete.isStarred}
             />
           ))}
         </SignalCard>

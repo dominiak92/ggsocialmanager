@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { CheckCircle2Icon } from 'lucide-react'
+import { CheckCircle2Icon, StarIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 
@@ -76,16 +76,22 @@ export function SignalRow({
   detail,
   badge,
   urgent = false,
+  starred = false,
 }: {
   label: string
   detail: string
   badge: string
   urgent?: boolean
+  /** Oznaczenie ważności — ten sam symbol co na liście zawodników. */
+  starred?: boolean
 }) {
   return (
     <li className="flex items-center gap-3 py-2.5">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{label}</p>
+        <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+          {starred && <StarIcon className="size-3.5 shrink-0 fill-amber-400 text-amber-500" />}
+          {label}
+        </p>
         <p className="text-muted-foreground text-xs">{detail}</p>
       </div>
       <Badge variant={urgent ? 'destructive' : 'secondary'} className="shrink-0">

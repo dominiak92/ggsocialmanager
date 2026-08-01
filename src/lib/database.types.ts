@@ -68,37 +68,40 @@ export type Database = {
         Row: {
           check_every_days: number
           created_at: string
-          discipline: string
+          disciplines: string[]
+          facebook_url: string
           id: string
           instagram_url: string
           is_active: boolean
+          is_starred: boolean
           name: string
           note: string
-          other_url: string
           updated_at: string
         }
         Insert: {
           check_every_days?: number
           created_at?: string
-          discipline?: string
+          disciplines?: string[]
+          facebook_url?: string
           id?: string
           instagram_url?: string
           is_active?: boolean
+          is_starred?: boolean
           name: string
           note?: string
-          other_url?: string
           updated_at?: string
         }
         Update: {
           check_every_days?: number
           created_at?: string
-          discipline?: string
+          disciplines?: string[]
+          facebook_url?: string
           id?: string
           instagram_url?: string
           is_active?: boolean
+          is_starred?: boolean
           name?: string
           note?: string
-          other_url?: string
           updated_at?: string
         }
         Relationships: []
