@@ -20,6 +20,7 @@ import type { Contest, ContestDraft } from '@/domain/models'
 import { CONTEST_ALERT_LABEL, contestsNeedingAction } from '@/domain/reminders'
 import { useChannels } from '@/hooks/use-channels'
 import { useContests } from '@/hooks/use-domain'
+import { useEntityForm } from '@/hooks/use-entity-form'
 import { addDays, fromDateKey, toDateKey } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 
@@ -43,8 +44,6 @@ function emptyDraft(): ContestDraft {
   }
 }
 
-type Target = { mode: 'create' } | { mode: 'edit'; contest: Contest }
-
 type Scope = 'open' | 'all'
 
 const STATUS_VARIANT: Record<ContestStatus, 'default' | 'secondary' | 'outline' | 'destructive'> = {
@@ -55,12 +54,19 @@ const STATUS_VARIANT: Record<ContestStatus, 'default' | 'secondary' | 'outline' 
 }
 
 export function ContestsPage() {
-  const { items, error, loading, create, update, remove } = useContests()
+  const collection = useContests()
+  const { items, error, loading, update } = collection
   const { channels } = useChannels()
-  const [target, setTarget] = useState<Target | null>(null)
-  const [form, setForm] = useState<ContestDraft>(emptyDraft)
-  const [saving, setSaving] = useState(false)
   const [scope, setScope] = useState<Scope>('open')
+
+  const dialog = useEntityForm<Contest, ContestDraft>({
+    collection,
+    empty: emptyDraft,
+    toDraft: ({ id: _id, ...draft }) => draft,
+    normalize: (draft) => ({ ...draft, name: draft.name.trim() }),
+    isValid: (draft) => draft.name.trim().length > 0,
+  })
+  const { form, patch } = dialog
 
   const today = useMemo(() => new Date(), [])
   const alerts = useMemo(() => contestsNeedingAction(items, today), [items, today])
@@ -68,6 +74,7 @@ export function ContestsPage() {
     () => new Map(alerts.map((alert) => [alert.contest.id, alert])),
     [alerts],
   )
+
   // Domyślnie chowamy rozliczone konkursy — archiwum przykrywa to,
   // co jeszcze wymaga ruchu.
   const visible = useMemo(
@@ -77,47 +84,6 @@ export function ContestsPage() {
 
   const channelName = (id: string | null) =>
     id ? (channels.find((channel) => channel.id === id)?.name ?? 'Nieznany kanał') : 'Kilka kanałów'
-
-  const openCreate = () => {
-    setForm(emptyDraft())
-    setTarget({ mode: 'create' })
-  }
-
-  const openEdit = (contest: Contest) => {
-    const { id: _id, ...draft } = contest
-    setForm(draft)
-    setTarget({ mode: 'edit', contest })
-  }
-
-  const save = async () => {
-    if (!target || !form.name.trim()) return
-    setSaving(true)
-    try {
-      const payload = { ...form, name: form.name.trim() }
-      if (target.mode === 'edit') await update(target.contest.id, payload)
-      else await create(payload)
-      setTarget(null)
-    } catch {
-      // Komunikat trzyma hook.
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const removeCurrent = async () => {
-    if (target?.mode !== 'edit') return
-    setSaving(true)
-    try {
-      await remove(target.contest.id)
-      setTarget(null)
-    } catch {
-      // jw.
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const patch = (next: Partial<ContestDraft>) => setForm((prev) => ({ ...prev, ...next }))
 
   /** Skrót „przesuń na kolejny etap" prosto z listy — bez otwierania dialogu. */
   const advance = async (contest: Contest) => {
@@ -139,7 +105,7 @@ export function ContestsPage() {
             Konkurs kończy się sam, ale nie zamyka się sam — etapy prowadzą aż do wysłanej nagrody.
           </p>
         </div>
-        <Button className="ml-auto" onClick={openCreate}>
+        <Button className="ml-auto" onClick={() => dialog.openCreate()}>
           <PlusIcon />
           Dodaj konkurs
         </Button>
@@ -195,7 +161,7 @@ export function ContestsPage() {
               >
                 <button
                   type="button"
-                  onClick={() => openEdit(contest)}
+                  onClick={() => dialog.openEdit(contest)}
                   className="focus-visible:ring-ring min-w-0 flex-1 text-left focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <div className="flex flex-wrap items-center gap-2">
@@ -232,13 +198,13 @@ export function ContestsPage() {
       )}
 
       <EntityDialog
-        open={target !== null}
-        title={target?.mode === 'edit' ? 'Edytuj konkurs' : 'Nowy konkurs'}
-        saving={saving}
-        canSave={form.name.trim().length > 0}
-        onClose={() => setTarget(null)}
-        onSave={save}
-        onDelete={target?.mode === 'edit' ? removeCurrent : undefined}
+        open={dialog.target !== null}
+        title={dialog.target?.mode === 'edit' ? 'Edytuj konkurs' : 'Nowy konkurs'}
+        saving={dialog.saving}
+        canSave={dialog.canSave}
+        onClose={dialog.close}
+        onSave={dialog.save}
+        onDelete={dialog.target?.mode === 'edit' ? dialog.removeCurrent : undefined}
       >
         <TextField
           id="contest-name"

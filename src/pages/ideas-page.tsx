@@ -28,24 +28,30 @@ import {
 } from '@/domain/enums'
 import type { Idea, IdeaDraft } from '@/domain/models'
 import { useIdeas } from '@/hooks/use-domain'
+import { useEntityForm } from '@/hooks/use-entity-form'
 import { cn } from '@/lib/utils'
 
 function emptyDraft(): IdeaDraft {
   return { title: '', detail: '', kind: 'idea', status: 'new', priority: 'normal' }
 }
 
-type Target = { mode: 'create' } | { mode: 'edit'; idea: Idea }
-
 type Filter = 'open' | 'all'
 
 const PRIORITY_ORDER: Record<IdeaPriority, number> = { high: 0, normal: 1, low: 2 }
 
 export function IdeasPage() {
-  const { items, error, loading, create, update, remove } = useIdeas()
+  const collection = useIdeas()
+  const { items, error, loading } = collection
   const [filter, setFilter] = useState<Filter>('open')
-  const [target, setTarget] = useState<Target | null>(null)
-  const [form, setForm] = useState<IdeaDraft>(emptyDraft)
-  const [saving, setSaving] = useState(false)
+
+  const dialog = useEntityForm<Idea, IdeaDraft>({
+    collection,
+    empty: emptyDraft,
+    toDraft: ({ id: _id, ...draft }) => draft,
+    normalize: (draft) => ({ ...draft, title: draft.title.trim() }),
+    isValid: (draft) => draft.title.trim().length > 0,
+  })
+  const { form, patch } = dialog
 
   const visible = useMemo(() => {
     const filtered =
@@ -59,47 +65,6 @@ export function IdeasPage() {
         a.title.localeCompare(b.title, 'pl'),
     )
   }, [items, filter])
-
-  const openCreate = () => {
-    setForm(emptyDraft())
-    setTarget({ mode: 'create' })
-  }
-
-  const openEdit = (idea: Idea) => {
-    const { id: _id, ...draft } = idea
-    setForm(draft)
-    setTarget({ mode: 'edit', idea })
-  }
-
-  const save = async () => {
-    if (!target || !form.title.trim()) return
-    setSaving(true)
-    try {
-      const payload = { ...form, title: form.title.trim() }
-      if (target.mode === 'edit') await update(target.idea.id, payload)
-      else await create(payload)
-      setTarget(null)
-    } catch {
-      // Komunikat trzyma hook.
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const removeCurrent = async () => {
-    if (target?.mode !== 'edit') return
-    setSaving(true)
-    try {
-      await remove(target.idea.id)
-      setTarget(null)
-    } catch {
-      // jw.
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const patch = (next: Partial<IdeaDraft>) => setForm((prev) => ({ ...prev, ...next }))
 
   return (
     <div className="space-y-6">
@@ -117,7 +82,7 @@ export function IdeasPage() {
               <TabsTrigger value="all">Wszystkie</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button onClick={openCreate}>
+          <Button onClick={() => dialog.openCreate()}>
             <PlusIcon />
             Dodaj
           </Button>
@@ -148,7 +113,7 @@ export function IdeasPage() {
             <li key={idea.id}>
               <button
                 type="button"
-                onClick={() => openEdit(idea)}
+                onClick={() => dialog.openEdit(idea)}
                 className={cn(
                   'hover:bg-accent focus-visible:ring-ring flex w-full items-start gap-3 rounded-lg border p-3 text-left transition focus-visible:ring-2 focus-visible:outline-none',
                   (idea.status === 'done' || idea.status === 'dropped') && 'opacity-55',
@@ -183,13 +148,13 @@ export function IdeasPage() {
       )}
 
       <EntityDialog
-        open={target !== null}
-        title={target?.mode === 'edit' ? 'Edytuj wpis' : 'Nowy wpis'}
-        saving={saving}
-        canSave={form.title.trim().length > 0}
-        onClose={() => setTarget(null)}
-        onSave={save}
-        onDelete={target?.mode === 'edit' ? removeCurrent : undefined}
+        open={dialog.target !== null}
+        title={dialog.target?.mode === 'edit' ? 'Edytuj wpis' : 'Nowy wpis'}
+        saving={dialog.saving}
+        canSave={dialog.canSave}
+        onClose={dialog.close}
+        onSave={dialog.save}
+        onDelete={dialog.target?.mode === 'edit' ? dialog.removeCurrent : undefined}
       >
         <TextField
           id="idea-title"

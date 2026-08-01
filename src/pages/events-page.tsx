@@ -22,6 +22,7 @@ import type { Publication, SportEvent, SportEventDraft } from '@/domain/models'
 import { eventPromo } from '@/domain/reminders'
 import { dataProvider } from '@/data/provider'
 import { useEvents } from '@/hooks/use-domain'
+import { useEntityForm } from '@/hooks/use-entity-form'
 import { fromDateKey, toDateKey } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 
@@ -39,18 +40,23 @@ function emptyDraft(): SportEventDraft {
   }
 }
 
-type Target = { mode: 'create' } | { mode: 'edit'; event: SportEvent }
-
 type Range = 'upcoming' | 'past' | 'all'
 
 export function EventsPage() {
-  const { items, error, loading, create, update, remove } = useEvents()
-  const [target, setTarget] = useState<Target | null>(null)
-  const [form, setForm] = useState<SportEventDraft>(emptyDraft)
-  const [saving, setSaving] = useState(false)
-  const [linked, setLinked] = useState<Publication[]>([])
+  const collection = useEvents()
+  const { items, error, loading } = collection
   const [range, setRange] = useState<Range>('upcoming')
   const [params, setParams] = useSearchParams()
+  const [linked, setLinked] = useState<Publication[]>([])
+
+  const dialog = useEntityForm<SportEvent, SportEventDraft>({
+    collection,
+    empty: emptyDraft,
+    toDraft: ({ id: _id, ...draft }) => draft,
+    normalize: (draft) => ({ ...draft, name: draft.name.trim(), endsOn: draft.endsOn || null }),
+    isValid: (draft) => draft.name.trim().length > 0,
+  })
+  const { form, patch } = dialog
 
   // Nagłośnienie liczymy z publikacji powiązanych z eventami — nie z okna
   // kalendarza, bo zapowiedź gali mogła pójść dwa miesiące wcześniej.
@@ -64,76 +70,33 @@ export function EventsPage() {
   const today = useMemo(() => new Date(), [])
   const promo = useMemo(() => eventPromo(items, linked, today), [items, linked, today])
 
+  const upcomingCount = useMemo(() => promo.filter((entry) => entry.daysUntil >= 0).length, [promo])
+
   /**
    * Domyślnie tylko nadchodzące. Lista jest posortowana rosnąco po dacie, więc
    * bez tego filtra minione wydarzenia z czasem urosłyby na SZCZYCIE ekranu
    * i trzeba by je przewijać, żeby dojść do tego, co dopiero będzie.
    */
-  const upcomingCount = useMemo(() => promo.filter((entry) => entry.daysUntil >= 0).length, [promo])
-
   const visible = useMemo(() => {
     if (range === 'all') return promo
     if (range === 'past') return promo.filter((entry) => entry.daysUntil < 0).toReversed()
     return promo.filter((entry) => entry.daysUntil >= 0)
   }, [promo, range])
 
-  const openCreate = () => {
-    setForm(emptyDraft())
-    setTarget({ mode: 'create' })
-  }
-
   /**
    * Wejście z pulpitu: „Dodaj u siebie" przy gali ze źródła zewnętrznego
    * przynosi nazwę i datę w adresie. Formularz otwiera się wypełniony, ale
-   * NIC nie zapisuje bez kliknięcia — zewnętrzne dane wchodzą do naszej
-   * domeny wyłącznie świadomie. Parametry czyścimy, żeby odświeżenie strony
-   * nie otwierało dialogu po raz drugi.
+   * NIC nie zapisuje bez kliknięcia. Parametry czyścimy, żeby odświeżenie
+   * strony nie otwierało dialogu po raz drugi.
    */
   useEffect(() => {
     const name = params.get('dodaj')
     if (!name) return
 
     const startsOn = params.get('data')
-    setForm({ ...emptyDraft(), name, ...(startsOn ? { startsOn } : {}) })
-    setTarget({ mode: 'create' })
+    dialog.openCreate({ name, ...(startsOn ? { startsOn } : {}) })
     setParams({}, { replace: true })
-  }, [params, setParams])
-
-  const openEdit = (event: SportEvent) => {
-    const { id: _id, ...draft } = event
-    setForm(draft)
-    setTarget({ mode: 'edit', event })
-  }
-
-  const save = async () => {
-    if (!target || !form.name.trim()) return
-    setSaving(true)
-    try {
-      const payload = { ...form, name: form.name.trim(), endsOn: form.endsOn || null }
-      if (target.mode === 'edit') await update(target.event.id, payload)
-      else await create(payload)
-      setTarget(null)
-    } catch {
-      // Komunikat trzyma hook i pokazuje go strona.
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const removeCurrent = async () => {
-    if (target?.mode !== 'edit') return
-    setSaving(true)
-    try {
-      await remove(target.event.id)
-      setTarget(null)
-    } catch {
-      // jw.
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const patch = (next: Partial<SportEventDraft>) => setForm((prev) => ({ ...prev, ...next }))
+  }, [params, setParams, dialog])
 
   return (
     <div className="space-y-6">
@@ -145,7 +108,7 @@ export function EventsPage() {
             liczony z publikacji, nie odhaczany ręcznie.
           </p>
         </div>
-        <Button className="ml-auto" onClick={openCreate}>
+        <Button className="ml-auto" onClick={() => dialog.openCreate()}>
           <PlusIcon />
           Dodaj event
         </Button>
@@ -192,7 +155,7 @@ export function EventsPage() {
               <li key={event.id}>
                 <button
                   type="button"
-                  onClick={() => openEdit(event)}
+                  onClick={() => dialog.openEdit(event)}
                   className={cn(
                     'hover:bg-accent focus-visible:ring-ring flex w-full flex-wrap items-center gap-3 rounded-lg border p-3 text-left transition focus-visible:ring-2 focus-visible:outline-none',
                     needsPromo && 'border-destructive/50 bg-destructive/5',
@@ -248,14 +211,14 @@ export function EventsPage() {
       )}
 
       <EntityDialog
-        open={target !== null}
-        title={target?.mode === 'edit' ? 'Edytuj event' : 'Nowy event'}
+        open={dialog.target !== null}
+        title={dialog.target?.mode === 'edit' ? 'Edytuj event' : 'Nowy event'}
         description="Nagłośnienie liczy się z publikacji przypisanych do tego eventu w kalendarzu."
-        saving={saving}
-        canSave={form.name.trim().length > 0}
-        onClose={() => setTarget(null)}
-        onSave={save}
-        onDelete={target?.mode === 'edit' ? removeCurrent : undefined}
+        saving={dialog.saving}
+        canSave={dialog.canSave}
+        onClose={dialog.close}
+        onSave={dialog.save}
+        onDelete={dialog.target?.mode === 'edit' ? dialog.removeCurrent : undefined}
       >
         <TextField
           id="event-name"

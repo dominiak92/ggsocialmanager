@@ -26,6 +26,7 @@ import { dataProvider } from '@/data/provider'
 import type { Athlete, AthleteCheck, AthleteDraft } from '@/domain/models'
 import { athletesDue, disciplineTags } from '@/domain/reminders'
 import { useAthletes } from '@/hooks/use-domain'
+import { useEntityForm } from '@/hooks/use-entity-form'
 import { daysBetween, fromDateKey, toDateKey } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 
@@ -42,8 +43,6 @@ function emptyDraft(): AthleteDraft {
   }
 }
 
-type Target = { mode: 'create' } | { mode: 'edit'; athlete: Athlete }
-
 const ALL = '__all__'
 
 /**
@@ -54,15 +53,22 @@ const ALL = '__all__'
  * „kogo dziś odwiedzić", a po to ten ekran istnieje.
  */
 export function AthletesPage() {
-  const { items, error, loading, create, update, remove } = useAthletes()
+  const collection = useAthletes()
+  const { items, error, loading, update, remove } = collection
   const [lastChecks, setLastChecks] = useState<Map<string, string>>(new Map())
-  const [target, setTarget] = useState<Target | null>(null)
-  const [form, setForm] = useState<AthleteDraft>(emptyDraft)
-  const [saving, setSaving] = useState(false)
   const [toDelete, setToDelete] = useState<Athlete | null>(null)
   const [sport, setSport] = useState<string>(ALL)
   const [query, setQuery] = useState('')
   const [history, setHistory] = useState<AthleteCheck[]>([])
+
+  const dialog = useEntityForm<Athlete, AthleteDraft>({
+    collection,
+    empty: emptyDraft,
+    toDraft: ({ id: _id, ...draft }) => draft,
+    normalize: (draft) => ({ ...draft, name: draft.name.trim() }),
+    isValid: (draft) => draft.name.trim().length > 0,
+  })
+  const { form, patch } = dialog
 
   const loadChecks = useCallback(() => {
     dataProvider.athletes
@@ -113,44 +119,20 @@ export function AthletesPage() {
     await update(athlete.id, { isStarred: !athlete.isStarred }).catch(() => null)
   }
 
-  const openCreate = () => {
-    setForm(emptyDraft())
-    setHistory([])
-    setTarget({ mode: 'create' })
-  }
-
+  /** Otwarcie edycji dociąga historię przeglądów, żeby dało się ją cofnąć. */
   const openEdit = (athlete: Athlete) => {
-    const { id: _id, ...draft } = athlete
-    setForm(draft)
-    setTarget({ mode: 'edit', athlete })
-    // Historia przeglądów jest po to, żeby dało się cofnąć omyłkowe kliknięcie
-    // „Przejrzany" — bez niej odhaczenie było nieodwracalne.
+    dialog.openEdit(athlete)
     dataProvider.athletes
       .listChecks(athlete.id)
       .then(setHistory)
       .catch(() => setHistory([]))
   }
 
-  const save = async () => {
-    if (!target || !form.name.trim()) return
-    setSaving(true)
-    try {
-      const payload = { ...form, name: form.name.trim() }
-      if (target.mode === 'edit') await update(target.athlete.id, payload)
-      else await create(payload)
-      setTarget(null)
-    } catch {
-      // Komunikat trzyma hook.
-    } finally {
-      setSaving(false)
-    }
-  }
-
   const confirmDelete = async () => {
     if (!toDelete) return
     try {
       await remove(toDelete.id)
-      setTarget(null)
+      dialog.close()
     } catch {
       // Komunikat trzyma hook.
     } finally {
@@ -165,8 +147,6 @@ export function AthletesPage() {
     loadChecks()
   }
 
-  const patch = (next: Partial<AthleteDraft>) => setForm((prev) => ({ ...prev, ...next }))
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start gap-3">
@@ -176,7 +156,13 @@ export function AthletesPage() {
             Kogo trzeba dziś odwiedzić. Gwiazdka i zaległości idą na górę.
           </p>
         </div>
-        <Button className="ml-auto" onClick={openCreate}>
+        <Button
+          className="ml-auto"
+          onClick={() => {
+            setHistory([])
+            dialog.openCreate()
+          }}
+        >
           <PlusIcon />
           Dodaj zawodnika
         </Button>
@@ -304,13 +290,17 @@ export function AthletesPage() {
       )}
 
       <EntityDialog
-        open={target !== null}
-        title={target?.mode === 'edit' ? 'Edytuj zawodnika' : 'Nowy zawodnik'}
-        saving={saving}
-        canSave={form.name.trim().length > 0}
-        onClose={() => setTarget(null)}
-        onSave={save}
-        onDelete={target?.mode === 'edit' ? () => setToDelete(target.athlete) : undefined}
+        open={dialog.target !== null}
+        title={dialog.target?.mode === 'edit' ? 'Edytuj zawodnika' : 'Nowy zawodnik'}
+        saving={dialog.saving}
+        canSave={dialog.canSave}
+        onClose={dialog.close}
+        onSave={dialog.save}
+        onDelete={
+          dialog.target?.mode === 'edit'
+            ? () => setToDelete(dialog.target?.mode === 'edit' ? dialog.target.item : null)
+            : undefined
+        }
       >
         <TextField
           id="athlete-name"
@@ -372,7 +362,7 @@ export function AthletesPage() {
 
         <NoteField id="athlete-note" value={form.note} onChange={(note) => patch({ note })} />
 
-        {target?.mode === 'edit' && (
+        {dialog.target?.mode === 'edit' && (
           <Field label="Historia przeglądów">
             {history.length === 0 ? (
               <p className="text-muted-foreground text-xs">Jeszcze nic nieodnotowane.</p>
