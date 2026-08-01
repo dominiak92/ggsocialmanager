@@ -15,16 +15,17 @@ w którym widać: co i gdzie poszło, co jeszcze nie poszło, i co zaraz umknie.
 
 Zrobione: **cały plan (kroki 1–8)**. Stan:
 
-| #   | Krok                                                        | Status |
-| --- | ----------------------------------------------------------- | ------ |
-| 1   | Kanały, rodzaje postów, publikacje                          | gotowe |
-| 2   | Kalendarz: tydzień (siatka pokrycia) + miesiąc + panel dnia | gotowe |
-| 3   | Eventy (zawody, gale MMA, campy) + wskaźnik nagłośnienia    | gotowe |
-| 4   | Konkursy: pipeline do zamknięcia, zwycięzca, adres wysyłki  | gotowe |
-| 5   | Zawodnicy sponsorowani + log przeglądów profili             | gotowe |
-| 6   | Pomysły i „do przegadania"                                  | gotowe |
-| 7   | Pulpit z **wyliczanymi** przypomnieniami                    | gotowe |
-| 8   | Filtry, wyszukiwanie, limity list                           | gotowe |
+| #   | Krok                                                                    | Status |
+| --- | ----------------------------------------------------------------------- | ------ |
+| 1   | Kanały, rodzaje postów, publikacje                                      | gotowe |
+| 2   | Kalendarz: tydzień (siatka pokrycia) + miesiąc + panel dnia             | gotowe |
+| 3   | Eventy (zawody, gale MMA, campy) + wskaźnik nagłośnienia                | gotowe |
+| 4   | Konkursy: pipeline do zamknięcia, zwycięzca, adres wysyłki              | gotowe |
+| 5   | Zawodnicy sponsorowani + log przeglądów profili                         | gotowe |
+| 6   | Pomysły i „do przegadania"                                              | gotowe |
+| 7   | Pulpit z **wyliczanymi** przypomnieniami                                | gotowe |
+| 8   | Filtry, wyszukiwanie, limity list                                       | gotowe |
+| 9   | Nagrywki — materiały do nakręcenia, etapy definiowane przez właściciela | gotowe |
 
 **Przypomnienia mają być wyliczane z danych, nie wpisywane ręcznie.** Lista,
 o której trzeba pamiętać, żeby ją uzupełnić, nie chroni przed zapomnieniem.
@@ -280,6 +281,16 @@ z Git Basha, nie z PowerShella.
 - **Gwiazdka** (`athletes.is_starred`) — ważniejszy zawodnik. **Wygrywa
   z przekroczeniem progu** przy sortowaniu (`athletesDue`), ale go NIE omija:
   gwiazdkowany, który jest na bieżąco, nadal nie krzyczy.
+- **Nagrywka** (`recordings`) — materiał do nakręcenia, zwykle odtworzenie
+  cudzej rolki: `reference_url` (co odtwarzamy), `idea` (pomysł na naszą
+  wersję), opcjonalny zawodnik i etap. **Etapy (`recording_stages`) definiuje
+  właściciel**, nie kod: świadomie tabela, a nie enum ani `check`, bo proces
+  bywa zmieniany, a enum wymagałby migracji przy każdej korekcie. Wolny tekst
+  odpada — rozjechałby się na „montaż" / „Montaż" i uniemożliwił grupowanie.
+  **`sort_order` etapów ma znaczenie ZACHOWANIA, nie wyglądu:** po nim działa
+  przycisk przesuwający nagrywkę dalej. Koniec pipeline'u ustawia `is_done`.
+  Zawodnik jest opcjonalny i `on delete set null` — nagrywka przeżywa
+  zakończenie współpracy.
 - **Pomysły** (`ideas`) — `kind` rozdziela pomysł od tematu „do przegadania",
   `status` i `priority` porządkują listę.
 
@@ -373,6 +384,11 @@ cokolwiek. Każda karta niesie własny licznik, a `alertCount` pozwala liczyć
 tylko pozycje pilne, gdy lista pokazuje szerszy kontekst (karta wydarzeń
 wypisuje cały horyzont, ale na czerwono liczy wyłącznie te bez zapowiedzi).
 
+**Kolejność kart nie jest przypadkowa:** najpierw to, co wymaga reakcji dziś
+(ciche kanały, zaniedbani zawodnicy), potem horyzont (wydarzenia, konkursy)
+i na końcu gale ze źródła zewnętrznego. Rzeczy odległe w czasie nie mogą
+przykrywać tych, które palą się teraz.
+
 **Wydarzenia mają JEDNĄ kartę.** Wcześniej „Najbliższe wydarzenia" i „Eventy
 bez zapowiedzi" stały obok siebie, a druga była podzbiorem pierwszej — te same
 nazwy dwa razy do przeczytania.
@@ -390,9 +406,16 @@ pamiętać nazwy i szukać jej w liście rozwijanej po drugiej stronie:
 | Pomysł → „Zaplanuj"                | `/kalendarz?tytul=<tytuł>`              | formularz z wypełnionym tytułem       |
 | Gala zewnętrzna → „Dodaj u siebie" | `/eventy?dodaj=<nazwa>&data=<data>`     | formularz eventu                      |
 
-Wszystkie **czyszczą parametry po otwarciu** (`setParams({}, { replace: true })`),
-żeby odświeżenie strony nie otwierało dialogu po raz drugi. Żaden z nich nie
-zapisuje nic sam — otwiera wypełniony formularz i czeka na decyzję.
+Oba **czyszczą parametry po otwarciu** (`setParams({}, { replace: true })`),
+żeby odświeżenie strony nie otwierało dialogu po raz drugi. Żaden nie zapisuje
+nic sam — otwiera wypełniony formularz i czeka na decyzję.
+
+**PUŁAPKA, która nas ugryzła:** efekt obsługujący deep-link trzymał w
+zależnościach cały obiekt z `useEntityForm`. Hook zwracał wtedy nowy literał
+przy każdym renderze, więc efekt odpalał się w kółko (efekt → `openCreate`
+ustawia świeży stan → render → efekt) i dialog się zawieszał. Dlatego
+`useEntityForm` zwraca teraz obiekt przez `useMemo` — jeśli dokładasz do niego
+pole, zadbaj o stabilną referencję.
 
 ## Sygnały na pulpicie
 
@@ -432,6 +455,12 @@ w `hooks/use-domain.ts`, a **rusztowanie dialogu formularza przez
 `hooks/use-entity-form.ts` (`useEntityForm`)** — stan formularza, `openCreate`,
 `openEdit`, `save`, `removeCurrent` i `patch`. Pięć list korzysta już z obu;
 nie dopisuj szóstej kopii ręcznie.
+
+**Słowniki kolorowane** (rodzaje postów, etapy nagrywek) mają jeden ekran:
+`components/settings/stage-list-card.tsx` (`StageListCard`). To ten sam problem
+— lista pozycji definiowanych przez właściciela, z kolorem używanym w widokach
+— więc druga kopia rozjechałaby się z pierwszą przy pierwszej poprawce. Prop
+`ordered` włącza strzałki kolejności tam, gdzie kolejność coś znaczy.
 
 **Ikony marek:** `lucide-react` 1.x NIE MA ikon Instagrama, Facebooka ani
 innych logotypów — usunięto je z pakietu. Nasze siedzą jako inline SVG

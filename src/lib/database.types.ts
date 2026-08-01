@@ -392,6 +392,90 @@ export type Database = {
           },
         ]
       }
+      recording_stages: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      recordings: {
+        Row: {
+          athlete_id: string | null
+          created_at: string
+          id: string
+          idea: string
+          is_done: boolean
+          note: string
+          reference_url: string
+          stage_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          athlete_id?: string | null
+          created_at?: string
+          id?: string
+          idea?: string
+          is_done?: boolean
+          note?: string
+          reference_url?: string
+          stage_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string | null
+          created_at?: string
+          id?: string
+          idea?: string
+          is_done?: boolean
+          note?: string
+          reference_url?: string
+          stage_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recordings_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recordings_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "recording_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

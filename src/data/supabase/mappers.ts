@@ -24,6 +24,8 @@ import type {
   Idea,
   PostType,
   Publication,
+  Recording,
+  RecordingStage,
   SportEvent,
 } from '@/domain/models'
 import type { Database } from '@/lib/database.types'
@@ -143,5 +145,28 @@ export function toIdea(row: Tables['ideas']['Row']): Idea {
     kind: row.kind as IdeaKind,
     status: row.status as IdeaStatus,
     priority: row.priority as IdeaPriority,
+  }
+}
+
+export function toRecordingStage(row: Tables['recording_stages']['Row']): RecordingStage {
+  return {
+    id: row.id,
+    name: row.name,
+    color: row.color,
+    sortOrder: row.sort_order,
+    isActive: row.is_active,
+  }
+}
+
+export function toRecording(row: Tables['recordings']['Row']): Recording {
+  return {
+    id: row.id,
+    title: row.title,
+    referenceUrl: row.reference_url,
+    idea: row.idea,
+    athleteId: row.athlete_id,
+    stageId: row.stage_id,
+    note: row.note,
+    isDone: row.is_done,
   }
 }

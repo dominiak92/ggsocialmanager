@@ -2,7 +2,7 @@ import { BellOffIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
 
 import { ChannelDialog, type ChannelTarget } from '@/components/settings/channel-dialog'
-import { PostTypesCard } from '@/components/settings/post-types-card'
+import { StageListCard } from '@/components/settings/stage-list-card'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +29,8 @@ import { sectionsOf } from '@/domain/calendar'
 import { CHANNEL_GROUP_LABEL, PLATFORM_LABEL } from '@/domain/enums'
 import type { Channel } from '@/domain/models'
 import { useChannels } from '@/hooks/use-channels'
+import { useRecordingStages } from '@/hooks/use-domain'
+import { usePostTypeAdmin } from '@/hooks/use-post-types'
 
 /**
  * Ustawienia kanałów.
@@ -38,6 +40,8 @@ import { useChannels } from '@/hooks/use-channels'
  * a kasowanie sensowne tylko dla kanału świeżo dodanego przez pomyłkę.
  */
 export function SettingsPage() {
+  const postTypes = usePostTypeAdmin()
+  const stages = useRecordingStages()
   const { channels, error, loading, create, update, remove, setActive } = useChannels()
   const [target, setTarget] = useState<ChannelTarget | null>(null)
   const [toDelete, setToDelete] = useState<Channel | null>(null)
@@ -144,7 +148,24 @@ export function SettingsPage() {
         ))
       )}
 
-      <PostTypesCard />
+      <StageListCard
+        title="Rodzaje postów"
+        description="Kolory w kalendarzu. Wyłączony rodzaj znika z formularza nowego wpisu, ale stare wpisy zachowują swój kolor."
+        addLabel="Dodaj rodzaj"
+        namePlaceholder="np. Zapowiedź"
+        deleteHint="Wpisy, które go używały, zostaną — stracą tylko oznaczenie rodzaju. Jeśli chcesz go wycofać z użycia, wyłącz przełącznik zamiast kasować."
+        collection={postTypes}
+      />
+
+      <StageListCard
+        title="Etapy nagrywek"
+        description="Twój proces produkcji. Kolejność ma znaczenie — po niej działa przycisk przesuwający nagrywkę dalej."
+        ordered
+        addLabel="Dodaj etap"
+        namePlaceholder="np. W montażu"
+        deleteHint="Nagrywki na tym etapie zostaną — stracą tylko przypisanie. Jeśli chcesz etap wycofać, wyłącz przełącznik zamiast kasować."
+        collection={stages}
+      />
 
       <ChannelDialog
         target={target}

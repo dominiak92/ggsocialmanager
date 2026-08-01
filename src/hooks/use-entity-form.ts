@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import type { CollectionState } from '@/hooks/use-collection'
 
@@ -108,16 +108,27 @@ export function useEntityForm<T extends { id: string }, D extends object>({
     }
   }, [target, collection])
 
-  return {
-    target,
-    form,
-    saving,
-    canSave: isValid(form) && !saving,
-    patch,
-    openCreate,
-    openEdit,
-    close,
-    save,
-    removeCurrent,
-  }
+  /**
+   * Zwracany obiekt MUSI mieć stabilną referencję.
+   *
+   * Bez tego każdy render dawał nowy literał, a efekt trzymający ten obiekt
+   * w zależnościach (np. obsługa deep-linku otwierającego formularz) odpalał
+   * się w kółko: efekt → `openCreate` ustawia świeży stan → render → efekt.
+   * Objawiało się to zawieszonym dialogiem.
+   */
+  return useMemo(
+    () => ({
+      target,
+      form,
+      saving,
+      canSave: isValid(form) && !saving,
+      patch,
+      openCreate,
+      openEdit,
+      close,
+      save,
+      removeCurrent,
+    }),
+    [target, form, saving, isValid, patch, openCreate, openEdit, close, save, removeCurrent],
+  )
 }

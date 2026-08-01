@@ -14,6 +14,12 @@ import type {
   Idea,
   IdeaDraft,
   IdeaPatch,
+  Recording,
+  RecordingDraft,
+  RecordingPatch,
+  RecordingStage,
+  RecordingStageDraft,
+  RecordingStagePatch,
   SportEvent,
   SportEventDraft,
   SportEventPatch,
@@ -36,4 +42,17 @@ export function useAthletes(): CollectionState<Athlete, AthleteDraft, AthletePat
 
 export function useIdeas(): CollectionState<Idea, IdeaDraft, IdeaPatch> {
   return useCollection(dataProvider.ideas)
+}
+
+export function useRecordings(): CollectionState<Recording, RecordingDraft, RecordingPatch> {
+  return useCollection(dataProvider.recordings)
+}
+
+/** Etapy nagrywek — w kolejności pipeline'u, bo po niej działa „przesuń dalej". */
+export function useRecordingStages(): CollectionState<
+  RecordingStage,
+  RecordingStageDraft,
+  RecordingStagePatch
+> {
+  return useCollection(dataProvider.recordingStages, (a, b) => a.sortOrder - b.sortOrder)
 }

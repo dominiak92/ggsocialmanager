@@ -1,6 +1,5 @@
-import { GiftIcon, PlusIcon, SpeakerIcon, TriangleAlertIcon } from 'lucide-react'
+import { GiftIcon, PlusIcon, TriangleAlertIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router'
 
 import { EntityDialog } from '@/components/shared/entity-dialog'
 import { FilterChips } from '@/components/shared/filter-chips'
@@ -184,17 +183,6 @@ export function ContestsPage() {
                     {contest.winnerName ? ` · zwycięzca: ${contest.winnerName}` : ''}
                   </p>
                 </button>
-
-                {contest.status === 'running' && (
-                  <Button asChild variant="outline" size="sm" className="shrink-0">
-                    <Link
-                      to={`/kalendarz?konkurs=${contest.id}&tytul=${encodeURIComponent(contest.name)}`}
-                    >
-                      <SpeakerIcon />
-                      Zapowiedz
-                    </Link>
-                  </Button>
-                )}
 
                 {contest.status !== 'sent' && (
                   <Button variant="outline" size="sm" onClick={() => void advance(contest)}>

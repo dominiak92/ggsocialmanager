@@ -6,6 +6,7 @@ import {
   MegaphoneIcon,
   SettingsIcon,
   UsersIcon,
+  VideoIcon,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router'
@@ -26,6 +27,7 @@ const NAV = [
   { to: '/eventy', label: 'Eventy', icon: MegaphoneIcon },
   { to: '/konkursy', label: 'Konkursy', icon: GiftIcon },
   { to: '/zawodnicy', label: 'Zawodnicy', icon: UsersIcon },
+  { to: '/nagrywki', label: 'Nagrywki', icon: VideoIcon },
   { to: '/pomysly', label: 'Pomysły', icon: LightbulbIcon },
   { to: '/ustawienia', label: 'Ustawienia', icon: SettingsIcon },
 ]

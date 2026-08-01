@@ -15,6 +15,8 @@ import {
   type IdeaRepo,
   type PostTypeRepo,
   type PublicationRepo,
+  type RecordingRepo,
+  type RecordingStageRepo,
 } from '@/data/interfaces'
 import {
   toAthlete,
@@ -25,6 +27,8 @@ import {
   toIdea,
   toPostType,
   toPublication,
+  toRecording,
+  toRecordingStage,
   toSportEvent,
 } from '@/data/supabase/mappers'
 import type { Platform } from '@/domain/enums'
@@ -35,6 +39,8 @@ import type {
   PostTypePatch,
   PublicationDraft,
   PublicationPatch,
+  RecordingPatch,
+  RecordingStagePatch,
   SportEventPatch,
 } from '@/domain/models'
 import { slugify } from '@/lib/slug'
@@ -592,6 +598,126 @@ const ideas: IdeaRepo = {
   },
 }
 
+function recordingStageRow(patch: RecordingStagePatch) {
+  return {
+    ...(patch.name === undefined ? {} : { name: patch.name }),
+    ...(patch.color === undefined ? {} : { color: patch.color }),
+    ...(patch.sortOrder === undefined ? {} : { sort_order: patch.sortOrder }),
+    ...(patch.isActive === undefined ? {} : { is_active: patch.isActive }),
+  }
+}
+
+const recordingStages: RecordingStageRepo = {
+  async list() {
+    const { data, error } = await supabase
+      .from('recording_stages')
+      .select('*')
+      .order('sort_order', { ascending: true })
+
+    if (error) fail('Nie udało się pobrać etapów', error.message)
+
+    return (data ?? []).map(toRecordingStage)
+  },
+
+  async create(draft) {
+    const { data, error } = await supabase
+      .from('recording_stages')
+      .insert({ ...recordingStageRow(draft), name: draft.name })
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się dodać etapu', error.message)
+
+    return toRecordingStage(data)
+  },
+
+  async update(id, patch) {
+    const { data, error } = await supabase
+      .from('recording_stages')
+      .update(recordingStageRow(patch))
+      .eq('id', id)
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się zapisać etapu', error.message)
+
+    return toRecordingStage(data)
+  },
+
+  async remove(id) {
+    const { error } = await supabase.from('recording_stages').delete().eq('id', id)
+
+    if (error) fail('Nie udało się usunąć etapu', error.message)
+  },
+}
+
+function recordingRow(patch: RecordingPatch) {
+  return {
+    ...(patch.title === undefined ? {} : { title: patch.title }),
+    ...(patch.referenceUrl === undefined ? {} : { reference_url: patch.referenceUrl }),
+    ...(patch.idea === undefined ? {} : { idea: patch.idea }),
+    ...(patch.athleteId === undefined ? {} : { athlete_id: patch.athleteId }),
+    ...(patch.stageId === undefined ? {} : { stage_id: patch.stageId }),
+    ...(patch.note === undefined ? {} : { note: patch.note }),
+    ...(patch.isDone === undefined ? {} : { is_done: patch.isDone }),
+  }
+}
+
+const recordings: RecordingRepo = {
+  async list() {
+    const { data, error } = await supabase
+      .from('recordings')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) fail('Nie udało się pobrać nagrywek', error.message)
+
+    return (data ?? []).map(toRecording)
+  },
+
+  async create(draft) {
+    const { data, error } = await supabase
+      .from('recordings')
+      .insert({ ...recordingRow(draft), title: draft.title })
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się dodać nagrywki', error.message)
+
+    return toRecording(data)
+  },
+
+  async update(id, patch) {
+    const { data, error } = await supabase
+      .from('recordings')
+      .update(recordingRow(patch))
+      .eq('id', id)
+      .select('*')
+      .single()
+
+    if (error) fail('Nie udało się zapisać nagrywki', error.message)
+
+    return toRecording(data)
+  },
+
+  async remove(id) {
+    const { error } = await supabase.from('recordings').delete().eq('id', id)
+
+    if (error) fail('Nie udało się usunąć nagrywki', error.message)
+  },
+}
+
 export function createSupabaseDataProvider(): DataProvider {
-  return { health, channels, postTypes, publications, events, contests, athletes, ideas }
+  return {
+    health,
+    channels,
+    postTypes,
+    publications,
+    events,
+    contests,
+    athletes,
+    ideas,
+    recordingStages,
+    recordings,
+  }
 }

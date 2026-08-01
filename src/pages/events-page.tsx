@@ -6,7 +6,7 @@ import {
   SpeakerIcon,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link } from 'react-router'
 
 import { EntityDialog } from '@/components/shared/entity-dialog'
 import { FilterChips } from '@/components/shared/filter-chips'
@@ -52,7 +52,6 @@ export function EventsPage() {
   const collection = useEvents()
   const { items, error, loading } = collection
   const [range, setRange] = useState<Range>('upcoming')
-  const [params, setParams] = useSearchParams()
   const [linked, setLinked] = useState<Publication[]>([])
 
   const dialog = useEntityForm<SportEvent, SportEventDraft>({
@@ -88,21 +87,6 @@ export function EventsPage() {
     if (range === 'past') return promo.filter((entry) => entry.daysUntil < 0).toReversed()
     return promo.filter((entry) => entry.daysUntil >= 0)
   }, [promo, range])
-
-  /**
-   * Wejście z pulpitu: „Dodaj u siebie" przy gali ze źródła zewnętrznego
-   * przynosi nazwę i datę w adresie. Formularz otwiera się wypełniony, ale
-   * NIC nie zapisuje bez kliknięcia. Parametry czyścimy, żeby odświeżenie
-   * strony nie otwierało dialogu po raz drugi.
-   */
-  useEffect(() => {
-    const name = params.get('dodaj')
-    if (!name) return
-
-    const startsOn = params.get('data')
-    dialog.openCreate({ name, ...(startsOn ? { startsOn } : {}) })
-    setParams({}, { replace: true })
-  }, [params, setParams, dialog])
 
   return (
     <div className="space-y-6">

@@ -29,6 +29,11 @@ const DASHBOARD_ROWS = 5
  *    listą do uzupełniania: lista, o której trzeba pamiętać, żeby ją wypełnić,
  *    nie chroni przed zapomnieniem.
  *
+ * Kolejność kart nie jest przypadkowa: najpierw to, co WYMAGA REAKCJI dziś
+ * (ciche kanały, zaniedbani zawodnicy), a dopiero potem horyzont — wydarzenia,
+ * konkursy i gale ze źródła zewnętrznego. Rzeczy odległe w czasie nie mogą
+ * przykrywać tych, które palą się teraz.
+ *
  * Świadomie NIE MA tu zbiorczego licznika „N rzeczy wymaga uwagi". Przy 38
  * zawodnikach bez ani jednego przeglądu pokazywał ~55 i przestawał cokolwiek
  * znaczyć — każda karta niesie własny, czytelny licznik.
@@ -99,6 +104,55 @@ export function DashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <SignalCard
+          title="Ciche kanały"
+          description="Każdy kanał ma własny próg — progi zmienisz w Ustawieniach."
+          icon={BellRingIcon}
+          to="/ustawienia"
+          count={silent.length}
+          loading={channelsLoading || silenceLoading}
+          emptyText="Żaden kanał nie przekroczył swojego progu ciszy."
+        >
+          {silent.slice(0, DASHBOARD_ROWS).map(({ channel, daysSince, lastPublishedOn }) => (
+            <SignalRow
+              key={channel.id}
+              label={channel.name}
+              detail={
+                daysSince === null
+                  ? `nic nie było wrzucane · próg ${channel.reminderAfterDays} dn.`
+                  : `ostatnio ${lastPublishedOn} · próg ${channel.reminderAfterDays} dn.`
+              }
+              badge={daysSince === null ? 'nigdy' : `${daysSince} dni`}
+              urgent={daysSince === null}
+            />
+          ))}
+        </SignalCard>
+
+        <SignalCard
+          title="Zawodnicy do odwiedzenia"
+          description="Profile, których nie przeglądałeś dłużej niż ich rytm."
+          icon={UsersIcon}
+          to="/zawodnicy"
+          count={athleteAlerts.length}
+          loading={athletesLoading}
+          emptyText="Wszystkie profile na bieżąco."
+        >
+          {athleteAlerts.slice(0, DASHBOARD_ROWS).map(({ athlete, daysSince, lastCheckedOn }) => (
+            <SignalRow
+              key={athlete.id}
+              label={athlete.name}
+              detail={
+                daysSince === null
+                  ? `nigdy nieprzejrzany · rytm ${athlete.checkEveryDays} dn.`
+                  : `ostatnio ${lastCheckedOn} · rytm ${athlete.checkEveryDays} dn.`
+              }
+              badge={daysSince === null ? 'nigdy' : `${daysSince} dni`}
+              urgent={daysSince === null}
+              starred={athlete.isStarred}
+            />
+          ))}
+        </SignalCard>
+
+        <SignalCard
           title="Najbliższe wydarzenia"
           description="Czerwona plakietka liczy te, które weszły w okno zapowiedzi bez ani jednej publikacji."
           icon={MegaphoneIcon}
@@ -148,55 +202,6 @@ export function DashboardPage() {
                     : `za ${daysUntilEnd} dni`
               }
               urgent={daysUntilEnd <= 0}
-            />
-          ))}
-        </SignalCard>
-
-        <SignalCard
-          title="Ciche kanały"
-          description="Każdy kanał ma własny próg — progi zmienisz w Ustawieniach."
-          icon={BellRingIcon}
-          to="/ustawienia"
-          count={silent.length}
-          loading={channelsLoading || silenceLoading}
-          emptyText="Żaden kanał nie przekroczył swojego progu ciszy."
-        >
-          {silent.slice(0, DASHBOARD_ROWS).map(({ channel, daysSince, lastPublishedOn }) => (
-            <SignalRow
-              key={channel.id}
-              label={channel.name}
-              detail={
-                daysSince === null
-                  ? `nic nie było wrzucane · próg ${channel.reminderAfterDays} dn.`
-                  : `ostatnio ${lastPublishedOn} · próg ${channel.reminderAfterDays} dn.`
-              }
-              badge={daysSince === null ? 'nigdy' : `${daysSince} dni`}
-              urgent={daysSince === null}
-            />
-          ))}
-        </SignalCard>
-
-        <SignalCard
-          title="Zawodnicy do odwiedzenia"
-          description="Profile, których nie przeglądałeś dłużej niż ich rytm."
-          icon={UsersIcon}
-          to="/zawodnicy"
-          count={athleteAlerts.length}
-          loading={athletesLoading}
-          emptyText="Wszystkie profile na bieżąco."
-        >
-          {athleteAlerts.slice(0, DASHBOARD_ROWS).map(({ athlete, daysSince, lastCheckedOn }) => (
-            <SignalRow
-              key={athlete.id}
-              label={athlete.name}
-              detail={
-                daysSince === null
-                  ? `nigdy nieprzejrzany · rytm ${athlete.checkEveryDays} dn.`
-                  : `ostatnio ${lastCheckedOn} · rytm ${athlete.checkEveryDays} dn.`
-              }
-              badge={daysSince === null ? 'nigdy' : `${daysSince} dni`}
-              urgent={daysSince === null}
-              starred={athlete.isStarred}
             />
           ))}
         </SignalCard>

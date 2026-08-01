@@ -1,10 +1,8 @@
-import { PlusIcon, SwordsIcon } from 'lucide-react'
+import { SwordsIcon } from 'lucide-react'
 import { useMemo } from 'react'
-import { useNavigate } from 'react-router'
 
 import { SignalCard, SignalRow } from '@/components/dashboard/signal-card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import type { SportEvent } from '@/domain/models'
 import { useFightEvents } from '@/hooks/use-fight-events'
 import { daysBetween, fromDateKey } from '@/lib/dates'
@@ -17,13 +15,12 @@ import { daysBetween, fromDateKey } from '@/lib/dates'
  * `hideWhenEmpty` sprawia, że przy awarii cudzego serwera karta po prostu
  * znika — to dodatek, nie funkcja krytyczna.
  *
- * „Dodaj u siebie" nie zapisuje nic po cichu — otwiera formularz eventu
- * z wypełnioną nazwą i datą. Zewnętrzne dane trafiają do naszej domeny
- * WYŁĄCZNIE przez świadomą decyzję właściciela.
+ * Karta jest CZYSTO INFORMACYJNA — nie ma tu żadnej akcji zapisu. Gale
+ * ze źródła zewnętrznego bywają niepełne, więc do naszej domeny trafiają
+ * wyłącznie przez świadome dodanie eventu ręcznie.
  */
 export function FightEventsCard({ mine, today }: { mine: SportEvent[]; today: Date }) {
   const events = useFightEvents()
-  const navigate = useNavigate()
 
   /**
    * Klucze gal, które już mamy u siebie — dokładne dopasowanie daty i nazwy.
@@ -64,21 +61,7 @@ export function FightEventsCard({ mine, today }: { mine: SportEvent[]; today: Da
                 <Badge variant="secondary" className="shrink-0">
                   masz to
                 </Badge>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0"
-                  onClick={() =>
-                    navigate(
-                      `/eventy?dodaj=${encodeURIComponent(event.name)}&data=${event.startsOn}`,
-                    )
-                  }
-                >
-                  <PlusIcon />
-                  Dodaj u siebie
-                </Button>
-              )
+              ) : undefined
             }
           />
         )

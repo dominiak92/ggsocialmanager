@@ -27,6 +27,12 @@ import type {
   Publication,
   PublicationDraft,
   PublicationPatch,
+  Recording,
+  RecordingDraft,
+  RecordingPatch,
+  RecordingStage,
+  RecordingStageDraft,
+  RecordingStagePatch,
   SportEvent,
   SportEventDraft,
   SportEventPatch,
@@ -131,6 +137,21 @@ export type AthleteRepo = {
   removeCheck(id: string): Promise<void>
 }
 
+export type RecordingStageRepo = {
+  list(): Promise<RecordingStage[]>
+  create(draft: RecordingStageDraft): Promise<RecordingStage>
+  update(id: string, patch: RecordingStagePatch): Promise<RecordingStage>
+  /** Bezpieczne: `recordings.stage_id` ma `on delete set null`. */
+  remove(id: string): Promise<void>
+}
+
+export type RecordingRepo = {
+  list(): Promise<Recording[]>
+  create(draft: RecordingDraft): Promise<Recording>
+  update(id: string, patch: RecordingPatch): Promise<Recording>
+  remove(id: string): Promise<void>
+}
+
 export type IdeaRepo = {
   list(): Promise<Idea[]>
   create(draft: IdeaDraft): Promise<Idea>
@@ -151,4 +172,6 @@ export type DataProvider = {
   contests: ContestRepo
   athletes: AthleteRepo
   ideas: IdeaRepo
+  recordingStages: RecordingStageRepo
+  recordings: RecordingRepo
 }

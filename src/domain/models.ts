@@ -199,6 +199,42 @@ export type ExternalFightEvent = {
   place: string
 }
 
+/**
+ * Etap produkcji nagrywki — słownik definiowany przez właściciela.
+ *
+ * Świadomie dane, nie enum: proces bywa zmieniany, a każda zmiana enuma
+ * wymagałaby migracji. `sortOrder` wyznacza kolejność pipeline'u, więc
+ * „przesuń dalej" wie, co jest następne.
+ */
+export type RecordingStage = {
+  id: string
+  name: string
+  color: string
+  sortOrder: number
+  isActive: boolean
+}
+
+export type RecordingStageDraft = { name: string; color: string; sortOrder: number }
+export type RecordingStagePatch = Partial<RecordingStageDraft & { isActive: boolean }>
+
+/** Nagrywka: materiał do nakręcenia, zwykle odtworzenie cudzej rolki. */
+export type Recording = {
+  id: string
+  title: string
+  /** Link do materiału, który odtwarzamy. */
+  referenceUrl: string
+  /** Pomysł na naszą wersję. */
+  idea: string
+  /** Zawodnik jest OPCJONALNY — nagrywka nie musi być z kimkolwiek. */
+  athleteId: string | null
+  stageId: string | null
+  note: string
+  isDone: boolean
+}
+
+export type RecordingDraft = Omit<Recording, 'id'>
+export type RecordingPatch = Partial<RecordingDraft>
+
 /** Pomysł albo temat do przegadania. */
 export type Idea = {
   id: string

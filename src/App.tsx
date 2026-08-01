@@ -9,6 +9,7 @@ import { DashboardPage } from '@/pages/dashboard-page'
 import { EventsPage } from '@/pages/events-page'
 import { IdeasPage } from '@/pages/ideas-page'
 import { NotFoundPage } from '@/pages/not-found-page'
+import { RecordingsPage } from '@/pages/recordings-page'
 import { SettingsPage } from '@/pages/settings-page'
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/eventy" element={<EventsPage />} />
         <Route path="/konkursy" element={<ContestsPage />} />
         <Route path="/zawodnicy" element={<AthletesPage />} />
+        <Route path="/nagrywki" element={<RecordingsPage />} />
         <Route path="/pomysly" element={<IdeasPage />} />
         <Route path="/ustawienia" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />
