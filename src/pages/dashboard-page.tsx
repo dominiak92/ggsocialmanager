@@ -1,4 +1,4 @@
-import { BellRingIcon, GiftIcon, MegaphoneIcon, UsersIcon } from 'lucide-react'
+import { BellRingIcon, CalendarClockIcon, GiftIcon, MegaphoneIcon, UsersIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { SignalCard, SignalRow } from '@/components/dashboard/signal-card'
@@ -9,6 +9,7 @@ import {
   athletesDue,
   contestsNeedingAction,
   eventsNeedingPromo,
+  upcomingEvents,
 } from '@/domain/reminders'
 import { useChannels } from '@/hooks/use-channels'
 import { useAthletes, useContests, useEvents } from '@/hooks/use-domain'
@@ -51,6 +52,7 @@ export function DashboardPage() {
     () => eventsNeedingPromo(events, linked, today),
     [events, linked, today],
   )
+  const upcoming = useMemo(() => upcomingEvents(events, linked, today), [events, linked, today])
   const contestAlerts = useMemo(() => contestsNeedingAction(contests, today), [contests, today])
   const athleteAlerts = useMemo(
     () => athletesDue(athletes, lastChecks, today),
@@ -71,6 +73,34 @@ export function DashboardPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
+        {/* Podgląd horyzontu, nie alarm. „Eventy bez zapowiedzi" milczą,
+            dopóki wydarzenie nie wejdzie w swoje okno zapowiedzi — a przy
+            planach na kwartał do przodu warto widzieć, co się szykuje. */}
+        <SignalCard
+          title="Najbliższe wydarzenia"
+          description="Co się zbliża, niezależnie od tego, czy ma już zapowiedź."
+          icon={CalendarClockIcon}
+          to="/eventy"
+          count={upcoming.length}
+          loading={eventsLoading}
+          emptyText="Nie ma nic zaplanowanego w przyszłości."
+          tone="info"
+        >
+          {upcoming.map(({ event, daysUntil, promoCount, channelCount }) => (
+            <SignalRow
+              key={event.id}
+              label={event.name}
+              detail={
+                promoCount === 0
+                  ? `${event.place || 'bez miejsca'} · brak zapowiedzi`
+                  : `${event.place || 'bez miejsca'} · ${promoCount} publ. na ${channelCount} kan.`
+              }
+              badge={daysUntil === 0 ? 'dziś' : `za ${daysUntil} dni`}
+              urgent={daysUntil <= 3 && promoCount === 0}
+            />
+          ))}
+        </SignalCard>
+
         <SignalCard
           title="Eventy bez zapowiedzi"
           description="Zbliża się, a nie poszła o tym ani jedna publikacja."

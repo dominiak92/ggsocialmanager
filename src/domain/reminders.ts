@@ -106,6 +106,24 @@ export function eventsNeedingPromo(
     .toSorted((a, b) => a.daysUntil - b.daysUntil)
 }
 
+/**
+ * Najbliższe wydarzenia — niezależnie od tego, czy mają już zapowiedź.
+ *
+ * To NIE jest sygnał alarmowy, tylko podgląd horyzontu. `eventsNeedingPromo`
+ * milczy, dopóki event nie wejdzie w swoje okno zapowiedzi, więc przy planach
+ * na trzy miesiące do przodu pulpit nie mówił o nich nic — a właśnie wtedy
+ * warto wiedzieć, co się szykuje.
+ */
+export function upcomingEvents(
+  events: SportEvent[],
+  publications: Publication[],
+  today: Date,
+): EventPromo[] {
+  return eventPromo(events, publications, today)
+    .filter((entry) => entry.daysUntil >= 0)
+    .toSorted((a, b) => a.daysUntil - b.daysUntil)
+}
+
 export type ContestAlertReason = 'ends-soon' | 'overdue' | 'winner-waiting' | 'prize-waiting'
 
 export type ContestAlert = {

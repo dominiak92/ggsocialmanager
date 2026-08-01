@@ -8,6 +8,7 @@ import {
   disciplineTags,
   eventsNeedingPromo,
   silentChannels,
+  upcomingEvents,
 } from '@/domain/reminders'
 
 const today = new Date(2026, 7, 20) // 2026-08-20
@@ -341,5 +342,51 @@ describe('disciplineTags', () => {
 
   it('pomija zawodników bez sportów', () => {
     expect(disciplineTags([athlete({ disciplines: [] })])).toEqual([])
+  })
+})
+
+describe('upcomingEvents', () => {
+  it('pokazuje nadchodzące niezależnie od okna zapowiedzi', () => {
+    // Kluczowa różnica wobec eventsNeedingPromo: ten event jest 60 dni przed
+    // startem, więc alarm o nim milczy — ale ma się pojawić w podglądzie.
+    const result = upcomingEvents(
+      [sportEvent({ startsOn: '2026-10-19', promoLeadDays: 14 })],
+      [],
+      today,
+    )
+
+    expect(result).toHaveLength(1)
+    expect(result[0]?.daysUntil).toBe(60)
+  })
+
+  it('pomija minione', () => {
+    expect(upcomingEvents([sportEvent({ startsOn: '2026-08-10' })], [], today)).toEqual([])
+  })
+
+  it('sortuje najbliższe pierwsze', () => {
+    const result = upcomingEvents(
+      [
+        sportEvent({ id: 'pozniej', startsOn: '2026-11-01' }),
+        sportEvent({ id: 'wczesniej', startsOn: '2026-09-01' }),
+      ],
+      [],
+      today,
+    )
+
+    expect(result.map((entry) => entry.event.id)).toEqual(['wczesniej', 'pozniej'])
+  })
+
+  it('niesie licznik zapowiedzi, żeby dało się odróżnić zaopiekowane', () => {
+    const result = upcomingEvents(
+      [sportEvent({ startsOn: '2026-09-10' })],
+      [
+        pub({ eventId: 'e1', channelId: 'ch1' }),
+        pub({ id: 'p2', eventId: 'e1', channelId: 'ch2' }),
+      ],
+      today,
+    )
+
+    expect(result[0]?.promoCount).toBe(2)
+    expect(result[0]?.channelCount).toBe(2)
   })
 })

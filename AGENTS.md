@@ -341,6 +341,12 @@ Wszystkie liczy `domain/reminders.ts` (czyste funkcje, „dziś" wstrzykiwane
 argumentem — inaczej testy psułyby się o północy). Nowy sygnał dopisuj TAM,
 nie w komponencie.
 
+Pulpit ma też jedną kartę **informacyjną**, nie alarmową: „Najbliższe
+wydarzenia" (`upcomingEvents`, `tone="info"`). Sygnał „event bez zapowiedzi"
+z definicji milczy, dopóki wydarzenie nie wejdzie w swoje `promo_lead_days`,
+więc przy planach na kwartał do przodu pulpit nie mówił o nich nic. Karty
+informacyjnej NIE oznaczaj czerwonym licznikiem — nic się w niej nie pali.
+
 | Sygnał                  | Kiedy krzyczy                                                                                       |
 | ----------------------- | --------------------------------------------------------------------------------------------------- |
 | Event bez zapowiedzi    | start w oknie `promo_lead_days`, zero powiązanych publikacji                                        |

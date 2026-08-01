@@ -25,6 +25,13 @@ type Props = {
   count: number
   loading?: boolean
   emptyText: string
+  /**
+   * `alert` = coś wymaga reakcji (czerwony licznik).
+   * `info` = podgląd horyzontu, nic się nie pali (neutralny licznik).
+   * Bez tego rozróżnienia karta „najbliższe wydarzenia" krzyczałaby na czerwono
+   * o czymś, co jest w porządku.
+   */
+  tone?: 'alert' | 'info'
   children: ReactNode
 }
 
@@ -41,6 +48,7 @@ export function SignalCard({
   count,
   loading = false,
   emptyText,
+  tone = 'alert',
   children,
 }: Props) {
   const rows = Children.toArray(children)
@@ -55,7 +63,7 @@ export function SignalCard({
             {title}
           </Link>
           {count > 0 && (
-            <Badge variant="destructive" className="ml-auto">
+            <Badge variant={tone === 'alert' ? 'destructive' : 'secondary'} className="ml-auto">
               {count}
             </Badge>
           )}
