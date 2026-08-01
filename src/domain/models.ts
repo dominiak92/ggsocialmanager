@@ -177,6 +177,24 @@ export type AthleteCheck = {
   note: string
 }
 
+/**
+ * Gala z ŹRÓDŁA ZEWNĘTRZNEGO (TheSportsDB) — tylko do odczytu.
+ *
+ * Świadomie NIE jest to `SportEvent`: to nie są nasze dane, nic tu nie zapisujemy
+ * i nie wolno na tym opierać żadnego sygnału ani wskaźnika. Służy wyłącznie do
+ * pokazania „coś takiego się zbliża"; żeby gala trafiła do naszej domeny,
+ * właściciel musi ją świadomie dodać jako `SportEvent`.
+ */
+export type ExternalFightEvent = {
+  id: string
+  name: string
+  /** `YYYY-MM-DD` — ta sama konwencja co `publishOn`. */
+  startsOn: string
+  /** Nazwa organizacji, np. „KSW", „UFC". */
+  organization: string
+  place: string
+}
+
 /** Pomysł albo temat do przegadania. */
 export type Idea = {
   id: string

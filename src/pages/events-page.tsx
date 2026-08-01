@@ -1,5 +1,6 @@
 import { CalendarClockIcon, ExternalLinkIcon, MegaphoneIcon, PlusIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 
 import { EntityDialog } from '@/components/shared/entity-dialog'
 import { FilterChips } from '@/components/shared/filter-chips'
@@ -49,6 +50,7 @@ export function EventsPage() {
   const [saving, setSaving] = useState(false)
   const [linked, setLinked] = useState<Publication[]>([])
   const [range, setRange] = useState<Range>('upcoming')
+  const [params, setParams] = useSearchParams()
 
   // Nagłośnienie liczymy z publikacji powiązanych z eventami — nie z okna
   // kalendarza, bo zapowiedź gali mogła pójść dwa miesiące wcześniej.
@@ -79,6 +81,23 @@ export function EventsPage() {
     setForm(emptyDraft())
     setTarget({ mode: 'create' })
   }
+
+  /**
+   * Wejście z pulpitu: „Dodaj u siebie" przy gali ze źródła zewnętrznego
+   * przynosi nazwę i datę w adresie. Formularz otwiera się wypełniony, ale
+   * NIC nie zapisuje bez kliknięcia — zewnętrzne dane wchodzą do naszej
+   * domeny wyłącznie świadomie. Parametry czyścimy, żeby odświeżenie strony
+   * nie otwierało dialogu po raz drugi.
+   */
+  useEffect(() => {
+    const name = params.get('dodaj')
+    if (!name) return
+
+    const startsOn = params.get('data')
+    setForm({ ...emptyDraft(), name, ...(startsOn ? { startsOn } : {}) })
+    setTarget({ mode: 'create' })
+    setParams({}, { replace: true })
+  }, [params, setParams])
 
   const openEdit = (event: SportEvent) => {
     const { id: _id, ...draft } = event

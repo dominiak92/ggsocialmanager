@@ -1,6 +1,7 @@
 import { BellRingIcon, CalendarClockIcon, GiftIcon, MegaphoneIcon, UsersIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
+import { FightEventsCard } from '@/components/dashboard/fight-events-card'
 import { SignalCard, SignalRow } from '@/components/dashboard/signal-card'
 import { dataProvider } from '@/data/provider'
 import type { Publication } from '@/domain/models'
@@ -195,6 +196,8 @@ export function DashboardPage() {
             />
           ))}
         </SignalCard>
+
+        <FightEventsCard mine={events} />
       </div>
     </div>
   )

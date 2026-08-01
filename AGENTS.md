@@ -386,6 +386,33 @@ wyłączenie przełącznika „Aktywny" jako łagodniejszą alternatywę.
 jeden komponent na wszystkie listy, żeby paski filtrów zachowywały się tak samo.
 Nie zawijają się, tylko przewijają w poziomie.
 
+## Źródło zewnętrzne — kalendarz gal
+
+`src/data/external/fight-events.ts` pobiera nadchodzące gale (KSW, UFC,
+Oktagon, TKO) z **TheSportsDB**. Klucz testowy `3` jest darmowy i publiczny,
+a odpowiedzi mają `Access-Control-Allow-Origin: *` — dlatego wołamy je wprost
+z przeglądarki, bez backendu i bez sekretów w bundlu.
+
+**To JEDYNY wyjątek od zasady „wszystko uzupełniane ręcznie".** Twarde granice:
+
+- **Poza `DataProvider`.** To nie jest nasza baza; nie mieszaj tego do
+  repozytoriów domenowych. Migracja bazy nie ma z tym plikiem nic wspólnego.
+- **Tylko do odczytu i tylko informacyjnie.** `ExternalFightEvent` to osobny typ,
+  nie `SportEvent`. **Nie opieraj na tym żadnego sygnału ani wskaźnika** —
+  dane bywają niepełne.
+- **Nic nie wchodzi do bazy automatycznie.** „Dodaj u siebie" otwiera formularz
+  eventu z wypełnioną nazwą i datą (deep-link `/eventy?dodaj=…&data=…`);
+  zapis jest świadomą decyzją właściciela.
+- **Awaria źródła nie może psuć pulpitu.** Padnięta organizacja nie zabiera
+  reszty (`Promise.allSettled`), a brak danych ukrywa całą kartę zamiast
+  pokazywać cudzy błąd jako nasz. Odpowiedzi cache'ujemy w `sessionStorage`
+  na 6 h.
+
+Zweryfikowane ograniczenia źródła: KSW zwraca najbliższą galę poprawnie, UFC na
+darmowym poziomie bywa puste, a **kart walk nie ma** — filtr „gdzie walczą
+Polacy" jest z tego źródła niewykonalny. Gdyby był potrzebny, wymaga płatnego
+API i funkcji Netlify jako proxy klucza.
+
 ## Listy muszą znosić skalę
 
 Realne dane szybko przerastają naiwne widoki. Reguły wyciągnięte z boju:
