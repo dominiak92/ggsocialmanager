@@ -5,21 +5,60 @@ GG Social Manager — React SPA hostowana na Netlify, dane w Supabase.
 Ten plik jest **źródłem prawdy dla agentów AI** (Claude Code, Cursor, Copilot, Codex).
 `CLAUDE.md` tylko na niego wskazuje — nie duplikuj treści.
 
+## Do czego to służy
+
+Panel pracy social managera marki Ground Game. **Nie łączy się z API social
+mediów** — właściciel uzupełnia wszystko ręcznie. Celem jest jedno miejsce,
+w którym widać: co i gdzie poszło, co jeszcze nie poszło, i co zaraz umknie.
+
 ## Stan projektu — przeczytaj najpierw
 
-Projekt jest na etapie **fundamentu**. Działa end-to-end pętla:
-przeglądarka → warstwa repozytoriów → Supabase (schemat `ggsm`) → deploy na Netlify.
-Pulpit pokazuje sondę połączenia z bazą (`ggsm.app_health`) — to jedyna „funkcja".
+Zrobione: **kroki 1–2** — kanały, rodzaje postów, publikacje i kalendarz
+(widok tygodnia + miesiąca). Reszta planu:
 
-**Modelu domenowego jeszcze NIE MA.** Nie zgaduj, czym ma być ta aplikacja i nie
-dokładaj tabel „na zapas" — zapytaj właściciela, zanim zaprojektujesz schemat.
+| #   | Krok                                                        | Status       |
+| --- | ----------------------------------------------------------- | ------------ |
+| 1   | Kanały, rodzaje postów, publikacje                          | gotowe       |
+| 2   | Kalendarz: tydzień (siatka pokrycia) + miesiąc + panel dnia | gotowe       |
+| 3   | Eventy (zawody, gale MMA, campy) + wskaźnik nagłośnienia    | do zrobienia |
+| 4   | Konkursy: pipeline do zamknięcia, zwycięzca, adres wysyłki  | do zrobienia |
+| 5   | Zawodnicy sponsorowani + log przeglądów profili             | do zrobienia |
+| 6   | Pomysły i „do przegadania"                                  | do zrobienia |
+| 7   | Pulpit z **wyliczanymi** przypomnieniami                    | do zrobienia |
+| 8   | Filtry, szybkie dodawanie, szlify mobilne                   | do zrobienia |
 
-Dwie decyzje, które kształtują cały kod (szczegóły niżej):
+**Przypomnienia mają być wyliczane z danych, nie wpisywane ręcznie.** Lista,
+o której trzeba pamiętać, żeby ją uzupełnić, nie chroni przed zapomnieniem.
+Sygnały to np.: event za X dni bez ani jednej publikacji, konkurs kończy się
+jutro, konkurs po terminie a niezamknięty, nagroda nierozesłana, zawodnik
+niesprawdzony od X dni, kanał milczy od X dni.
+
+Trzy decyzje, które kształtują cały kod (szczegóły niżej):
 
 1. **Aplikacja będzie migrowana na inną bazę i scalona z większą aplikacją.**
    Dlatego dostęp do danych jest od pierwszego commita zamknięty za interfejsami.
 2. **Aplikacja nie ma własnego logowania.** Tożsamość dostarczy aplikacja
    nadrzędna (Google). Dziś jest atrapa w jednym pliku.
+3. **Baza jest otwarta dla roli `anon`** — świadoma decyzja właściciela.
+
+## Dostęp do danych — świadoma decyzja właściciela
+
+> Wszystkie tabele domenowe mają politykę `for all to anon ... using (true)`.
+> Klucz `anon` jest publiczny (siedzi w bundlu JS), więc **każdy, kto zna adres
+> strony, może te dane czytać I ZMIENIAĆ.** To nie jest przeoczenie — właściciel
+> został poinformowany o ryzyku (ujawnienie danych ORAZ możliwość ich skasowania)
+> i wybrał tę opcję, żeby nie budować logowania, które i tak zostanie zastąpione
+> przez auth z aplikacji nadrzędnej.
+
+Konsekwencje dla agenta:
+
+- **Nie „naprawiaj" tego samowolnie.** Zmiana polityk na `authenticated` bez
+  ekranu logowania odetnie właścicielowi dostęp do aplikacji.
+- **Zgłoś ryzyko ponownie, zanim dołożysz kolejne dane wrażliwe** (adresy
+  zwycięzców konkursów już takie są).
+- Przejście na logowanie, gdy przyjdzie taka decyzja, to: podmiana `to anon` na
+  `to authenticated` w politykach + podpięcie `resolveIdentity`. **Bez zmian w UI**
+  — dlatego warstwa danych i tożsamość są odseparowane.
 
 ## Stack
 
@@ -141,13 +180,13 @@ Twarde granice:
   jest domyślnie eksponowany przez PostgREST i łatwo o wyciek. Klient Supabase
   jest przypięty do `ggsm` przez `db: { schema: 'ggsm' }`.
 - **Klucz `anon` jest publiczny** — siedzi w bundlu JS. Jedyną ochroną danych
-  jest RLS.
+  jest RLS, a ta jest dziś celowo otwarta (patrz „Dostęp do danych").
 - **Każda tabela w `ggsm` musi mieć RLS i jawne polityki.** Domyślne uprawnienia
   w schemacie są odebrane (`alter default privileges ... revoke all`), więc każda
-  nowa tabela wymaga świadomego `grant`.
-- **Jedyny obecny wyjątek dla `anon`:** `select` na `ggsm.app_health` — sonda
-  połączenia, bez danych wrażliwych. Nie dokładaj kolejnych polityk dla `anon`
-  bez wyraźnej potrzeby.
+  nowa tabela wymaga świadomego `grant`. Kopiuj wzorzec z migracji
+  `20260801140000_channels_publications.sql`.
+- **Czasu modyfikacji nie ustawia klient** — pilnuje go trigger
+  `ggsm.touch_updated_at()`. Podpinaj go do każdej nowej tabeli.
 - **Zmiany schematu idą przez migracje** w `supabase/migrations/`, nie przez
   klikanie w panelu.
 - `src/lib/database.types.ts` jest **generowany** — nie edytuj go ręcznie.
@@ -167,28 +206,67 @@ npm run db:types                            # przegeneruj typy PO KAŻDEJ migrac
 `npm run db:types` używa składni `$SUPABASE_PROJECT_ID` — na Windows odpal go
 z Git Basha, nie z PowerShella.
 
+## Model domenowy
+
+- **Kanał** (`channels`) = platforma + rynek, np. Fanpage FB / CZ. Jest ich 16
+  (grupa FB, 6 fanpage'y, 5 Instagramów, TikTok, YouTube, Newsletter,
+  Akademia/Sklep/Blog jako JEDEN kanał). `code` (`fb-pl`, `ig-cz`, ...) to
+  stabilny klucz seedów — nie zmieniaj go. **Kanałów się nie kasuje**, bo
+  osierociłyby publikacje; wyłącza się je przez `is_active` w Ustawieniach.
+- **Rodzaj postu** (`post_types`) — słownik, nie enum, bo lista będzie rosła.
+  Startowo: produkt, news, lifestyle, tips & tricks, współpraca, event, artykuł,
+  meme, konkurs. `color` to nazwa palety; na klasę CSS zamienia ją
+  `postTypeColorClass` — **nie składaj klas Tailwinda ze stringów**
+  (`bg-${color}-500` nie zostanie wygenerowane).
+- **Publikacja** (`publications`) — JEDEN byt na „zaplanowane" i „wrzucone".
+  Odhaczenie w kalendarzu to zmiana `status` z `planned` na `published`, nie
+  osobna tabela. Dzięki temu ta sama siatka służy do planowania w przód i do
+  raportowania wstecz. Domyślny status zależy od daty (dziś/wstecz →
+  `published`, przyszłość → `planned`).
+- **„Event" i „konkurs" są jednocześnie rodzajem postu i osobnym bytem** — to
+  celowe. Rodzaj opisuje treść publikacji, a osobne tabele (kroki 3–4) trzymają
+  samo wydarzenie. Publikacja będzie mogła wskazać konkretny event/konkurs, co
+  pozwoli policzyć, na ilu kanałach coś zostało nagłośnione.
+
+**Daty to daty, nie momenty.** `publish_on` jest typu `date`, a klucz dnia
+w kodzie składa `toDateKey()` z lokalnych komponentów. **Nigdy nie używaj
+`toISOString()`** do klucza dnia — konwersja do UTC przesuwa wieczorne wpisy na
+poprzedni dzień. Cała arytmetyka kalendarza siedzi w `lib/dates.ts` i ma testy.
+
 ## Struktura
 
 ```text
 src/
   components/ui/        # wygenerowane komponenty shadcn (nie ruszaj bez powodu)
   components/           # nasze komponenty aplikacyjne (motyw, error boundary)
-  components/layout/    # rama aplikacji (AppShell: nagłówek, treść, stopka)
+  components/layout/    # rama aplikacji (AppShell: nagłówek z nawigacją)
+  components/calendar/  # siatka tygodnia, miesiąc, panel dnia, dialog wpisu
   pages/                # widoki podpięte pod router
+  domain/enums.ts       # wyliczenia + etykiety PL (zgodne z `check` w bazie)
   domain/models.ts      # model domenowy — zero I/O, zero Supabase
+  domain/calendar.ts    # czysta logika grupowania (siatka, dzień, sekcje)
   data/interfaces.ts    # kontrakty repozytoriów + DataProvider
   data/supabase/        # implementacja repo na Supabase + mappery Row->domena
   data/provider.ts      # WYBÓR backendu — jedno miejsce
-  hooks/                # useHealth, ... — tylko na interfejsach
+  hooks/                # useChannels, usePublications, ... — tylko na interfejsach
   lib/auth/identity.tsx # PUNKT WYMIANY TOŻSAMOŚCI (docelowo auth z aplikacji nadrzędnej)
+  lib/dates.ts          # arytmetyka kalendarza (lokalne daty, nie UTC)
   lib/supabase.ts       # klient przypięty do schematu `ggsm`
   lib/database.types.ts # GENEROWANY z bazy — nie edytuj ręcznie
   lib/utils.ts          # helper cn() od shadcn
   test/setup.ts         # bootstrap Vitest
   App.tsx               # routing
-  main.tsx              # providery (theme, identity, router)
+  main.tsx              # providery (theme, tooltip, identity, router)
 supabase/migrations/    # zmiany schematu `ggsm` (nigdy `public`)
 ```
+
+## Trasy
+
+| Ścieżka       | Widok                                            |
+| ------------- | ------------------------------------------------ |
+| `/`           | Pulpit (docelowo przypomnienia — krok 7)         |
+| `/kalendarz`  | Siatka tygodnia / przegląd miesiąca / panel dnia |
+| `/ustawienia` | Włączanie i wyłączanie kanałów                   |
 
 ## Deploy
 

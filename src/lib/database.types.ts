@@ -32,6 +32,129 @@ export type Database = {
         }
         Relationships: []
       }
+      channels: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          locale: string | null
+          name: string
+          platform: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          locale?: string | null
+          name: string
+          platform: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          locale?: string | null
+          name?: string
+          platform?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      post_types: {
+        Row: {
+          code: string
+          color: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      publications: {
+        Row: {
+          channel_id: string
+          created_at: string
+          id: string
+          note: string
+          post_type_id: string | null
+          publish_on: string
+          status: string
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          id?: string
+          note?: string
+          post_type_id?: string | null
+          publish_on: string
+          status?: string
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          id?: string
+          note?: string
+          post_type_id?: string | null
+          publish_on?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publications_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publications_post_type_id_fkey"
+            columns: ["post_type_id"]
+            isOneToOne: false
+            referencedRelation: "post_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

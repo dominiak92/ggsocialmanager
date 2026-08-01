@@ -9,6 +9,7 @@ import { BrowserRouter } from 'react-router'
 import App from '@/App'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { ThemeProvider } from '@/components/theme-provider'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { IdentityProvider } from '@/lib/auth/identity'
 
 // Po nowym deployu otwarta karta ma nieaktualne hashe chunków — leniwy import
@@ -26,11 +27,13 @@ createRoot(root).render(
   <StrictMode>
     <ErrorBoundary>
       <ThemeProvider>
-        <IdentityProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </IdentityProvider>
+        <TooltipProvider delayDuration={200}>
+          <IdentityProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </IdentityProvider>
+        </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
   </StrictMode>,
