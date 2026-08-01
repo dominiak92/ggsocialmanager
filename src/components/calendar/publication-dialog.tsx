@@ -1,5 +1,5 @@
 import { Trash2Icon } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type KeyboardEvent } from 'react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -133,36 +133,35 @@ export function PublicationDialog({
   const save = async () => {
     setSaving(true)
     try {
-      if (target.mode === 'edit') {
-        await onUpdate(target.publication.id, {
-          channelId: form.channelId,
-          publishOn: form.publishOn,
-          postTypeId: form.postTypeId,
-          status: form.status,
-          title: form.title.trim(),
-          url: form.url.trim(),
-          note: form.note.trim(),
-          eventId: form.eventId,
-          contestId: form.contestId,
-        })
-      } else {
-        await onCreate({
-          channelId: form.channelId,
-          publishOn: form.publishOn,
-          postTypeId: form.postTypeId,
-          status: form.status,
-          title: form.title.trim(),
-          url: form.url.trim(),
-          note: form.note.trim(),
-          eventId: form.eventId,
-          contestId: form.contestId,
-        })
+      // Jeden payload dla obu ścieżek — przy dwóch kopiach łatwo zaktualizować
+      // tylko jedną gałąź i stracić pole przy edycji albo przy dodawaniu.
+      const payload = {
+        ...form,
+        title: form.title.trim(),
+        url: form.url.trim(),
+        note: form.note.trim(),
       }
+
+      if (target.mode === 'edit') await onUpdate(target.publication.id, payload)
+      else await onCreate(payload)
       onClose()
     } catch {
       // Komunikat pokazuje strona — hook trzyma ostatni błąd.
     } finally {
       setSaving(false)
+    }
+  }
+
+  /**
+   * Enter w polu jednoliniowym zapisuje. Odhaczanie tego, co poszło, to
+   * czynność powtarzana kilkanaście razy dziennie — sięganie myszką do
+   * „Zapisz" za każdym razem jest tu realnym kosztem. W `Textarea` celowo
+   * NIE podpinamy tego, bo tam Enter ma łamać linię.
+   */
+  const saveOnEnter = (event: KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      void save()
     }
   }
 
@@ -257,6 +256,7 @@ export function PublicationDialog({
               id="title"
               value={form.title}
               onChange={(event) => patch({ title: event.target.value })}
+              onKeyDown={saveOnEnter}
               placeholder="np. Rashguard Ronin — zapowiedź"
             />
           </div>
@@ -267,6 +267,7 @@ export function PublicationDialog({
               id="url"
               value={form.url}
               onChange={(event) => patch({ url: event.target.value })}
+              onKeyDown={saveOnEnter}
               placeholder="https://..."
             />
           </div>

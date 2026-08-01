@@ -9,8 +9,7 @@ import {
   CONTEST_ALERT_LABEL,
   athletesDue,
   contestsNeedingAction,
-  eventsNeedingPromo,
-  upcomingEvents,
+  eventPromo,
 } from '@/domain/reminders'
 import { useChannels } from '@/hooks/use-channels'
 import { useAthletes, useContests, useEvents } from '@/hooks/use-domain'
@@ -24,6 +23,9 @@ import { useSilentChannels } from '@/hooks/use-silent-channels'
  * Logika sygnałów siedzi w `domain/reminders.ts` i ma testy; tutaj zostaje
  * wyłącznie składanie danych i prezentacja.
  */
+/** Ile pozycji pokazuje karta — zgodne z limitem w `SignalCard`. */
+const DASHBOARD_ROWS = 5
+
 export function DashboardPage() {
   const { channels, loading: channelsLoading } = useChannels()
   const { silent, loading: silenceLoading } = useSilentChannels(channels)
@@ -49,11 +51,31 @@ export function DashboardPage() {
   // względem różnych chwil, gdyby render trafił w północ.
   const today = useMemo(() => new Date(), [])
 
+  // Jedno przeliczenie pokrycia na cały pulpit — obie listy eventów są z niego
+  // tylko wycinkami, więc liczenie go dwa razy było czystą stratą.
+  const promo = useMemo(() => eventPromo(events, linked, today), [events, linked, today])
+
   const eventAlerts = useMemo(
-    () => eventsNeedingPromo(events, linked, today),
-    [events, linked, today],
+    () =>
+      promo
+        .filter((entry) => entry.promoCount === 0 && entry.inPromoWindow)
+        .toSorted((a, b) => a.daysUntil - b.daysUntil),
+    [promo],
   )
-  const upcoming = useMemo(() => upcomingEvents(events, linked, today), [events, linked, today])
+  const upcoming = useMemo(
+    () =>
+      promo.filter((entry) => entry.daysUntil >= 0).toSorted((a, b) => a.daysUntil - b.daysUntil),
+    [promo],
+  )
+
+  /**
+   * Pusta lista „bez zapowiedzi" ma DWIE różne przyczyny i mylenie ich wprowadza
+   * w błąd: albo eventy w oknie zapowiedzi mają już publikacje, albo — znacznie
+   * częściej — żaden event jeszcze w to okno nie wszedł. Komunikat musi
+   * rozróżniać te sytuacje, bo „każdy event ma zapowiedź" przy zerze publikacji
+   * to po prostu nieprawda. Sam predykat okna należy do domeny (`inPromoWindow`).
+   */
+  const anyInPromoWindow = promo.some((entry) => entry.inPromoWindow)
   const contestAlerts = useMemo(() => contestsNeedingAction(contests, today), [contests, today])
   const athleteAlerts = useMemo(
     () => athletesDue(athletes, lastChecks, today),
@@ -87,19 +109,21 @@ export function DashboardPage() {
           emptyText="Nie ma nic zaplanowanego w przyszłości."
           tone="info"
         >
-          {upcoming.map(({ event, daysUntil, promoCount, channelCount }) => (
-            <SignalRow
-              key={event.id}
-              label={event.name}
-              detail={
-                promoCount === 0
-                  ? `${event.place || 'bez miejsca'} · brak zapowiedzi`
-                  : `${event.place || 'bez miejsca'} · ${promoCount} publ. na ${channelCount} kan.`
-              }
-              badge={daysUntil === 0 ? 'dziś' : `za ${daysUntil} dni`}
-              urgent={daysUntil <= 3 && promoCount === 0}
-            />
-          ))}
+          {upcoming
+            .slice(0, DASHBOARD_ROWS)
+            .map(({ event, daysUntil, promoCount, channelCount }) => (
+              <SignalRow
+                key={event.id}
+                label={event.name}
+                detail={
+                  promoCount === 0
+                    ? `${event.place || 'bez miejsca'} · brak zapowiedzi`
+                    : `${event.place || 'bez miejsca'} · ${promoCount} publ. na ${channelCount} kan.`
+                }
+                badge={daysUntil === 0 ? 'dziś' : `za ${daysUntil} dni`}
+                urgent={daysUntil <= 3 && promoCount === 0}
+              />
+            ))}
         </SignalCard>
 
         <SignalCard
@@ -109,9 +133,13 @@ export function DashboardPage() {
           to="/eventy"
           count={eventAlerts.length}
           loading={eventsLoading}
-          emptyText="Każdy nadchodzący event ma zapowiedź."
+          emptyText={
+            anyInPromoWindow
+              ? 'Każdy event w oknie zapowiedzi ma już publikację.'
+              : 'Żaden event nie wszedł jeszcze w swoje okno zapowiedzi.'
+          }
         >
-          {eventAlerts.map(({ event, daysUntil }) => (
+          {eventAlerts.slice(0, DASHBOARD_ROWS).map(({ event, daysUntil }) => (
             <SignalRow
               key={event.id}
               label={event.name}
@@ -131,7 +159,7 @@ export function DashboardPage() {
           loading={contestsLoading}
           emptyText="Żaden konkurs nie czeka na ruch."
         >
-          {contestAlerts.map(({ contest, reason, daysUntilEnd }) => (
+          {contestAlerts.slice(0, DASHBOARD_ROWS).map(({ contest, reason, daysUntilEnd }) => (
             <SignalRow
               key={contest.id}
               label={contest.name}
@@ -157,7 +185,7 @@ export function DashboardPage() {
           loading={channelsLoading || silenceLoading}
           emptyText="Żaden kanał nie przekroczył swojego progu ciszy."
         >
-          {silent.map(({ channel, daysSince, lastPublishedOn }) => (
+          {silent.slice(0, DASHBOARD_ROWS).map(({ channel, daysSince, lastPublishedOn }) => (
             <SignalRow
               key={channel.id}
               label={channel.name}
@@ -181,7 +209,7 @@ export function DashboardPage() {
           loading={athletesLoading}
           emptyText="Wszystkie profile na bieżąco."
         >
-          {athleteAlerts.map(({ athlete, daysSince, lastCheckedOn }) => (
+          {athleteAlerts.slice(0, DASHBOARD_ROWS).map(({ athlete, daysSince, lastCheckedOn }) => (
             <SignalRow
               key={athlete.id}
               label={athlete.name}
@@ -197,7 +225,7 @@ export function DashboardPage() {
           ))}
         </SignalCard>
 
-        <FightEventsCard mine={events} />
+        <FightEventsCard mine={events} today={today} />
       </div>
     </div>
   )

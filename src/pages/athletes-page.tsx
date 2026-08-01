@@ -239,8 +239,9 @@ export function AthletesPage() {
                   !athlete.isActive && 'opacity-50',
                 )}
               >
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => void toggleStar(athlete)}
                   aria-label={
                     athlete.isStarred
@@ -248,7 +249,7 @@ export function AthletesPage() {
                       : `Oznacz jako ważnego: ${athlete.name}`
                   }
                   aria-pressed={athlete.isStarred}
-                  className="hover:bg-accent focus-visible:ring-ring inline-flex size-7 shrink-0 items-center justify-center rounded-md transition focus-visible:ring-2 focus-visible:outline-none"
+                  className="shrink-0"
                 >
                   <StarIcon
                     className={cn(
@@ -258,7 +259,7 @@ export function AthletesPage() {
                         : 'text-muted-foreground/40',
                     )}
                   />
-                </button>
+                </Button>
 
                 <button
                   type="button"

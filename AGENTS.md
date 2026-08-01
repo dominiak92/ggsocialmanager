@@ -115,9 +115,16 @@ npm run verify      # typecheck + lint + test + build — odpal przed każdym co
    `motion-safe:`. **Wejście widoku jest JEDNO i należy do layoutu**
    (`<main key={pathname}>` w `AppShell`) — nie dokładaj animacji wejścia na
    kontenerach stron ani listach, bo przy dociąganiu danych odpalają się ponownie
-   i dają kaskadę migotania. Cele dotykowe podnosi globalny blok
-   `@media (pointer: coarse)` w `index.css` — nie powtarzaj tego per komponent.
-   Wysokości okna licz w `dvh`, nie `vh`.
+   i dają kaskadę migotania. **Cele dotykowe podnosi globalny blok
+   `@media (pointer: coarse)` w `index.css` — nie powtarzaj tego per komponent.**
+   Reguła celuje w `[data-slot='button'][data-size^='icon']`, więc każdy przycisk
+   ikonowy zbudowany na `Button` dostaje wygodny cel automatycznie. Wniosek
+   praktyczny: **małe przyciski ikonowe rób przez `Button size="icon-sm"`,
+   a nie ręcznie sklejonym `<button className="size-7 …">`** — inaczej wypadają
+   z tej reguły. Jedyny wyjątek to `SocialLink` (jest `<a>`, nie `Button`) —
+   ma `data-touch="icon"`. Element, którego rozmiar wynika z układu (np. „+"
+   w kratce kalendarza o stałej wysokości), świadomie zostaje mały: wymuszone
+   40 px rozepchnęłoby mu rodzica. Wysokości okna licz w `dvh`, nie `vh`.
 6. **Bez `any`.** Jeśli typ jest trudny — użyj `unknown` i zawęź.
 7. **Nie dodawaj bibliotek bez potrzeby.** Zanim dołożysz zależność, sprawdź,
    czy shadcn / Radix / natywne API tego nie robi.
@@ -418,7 +425,12 @@ API i funkcji Netlify jako proxy klucza.
 Realne dane szybko przerastają naiwne widoki. Reguły wyciągnięte z boju:
 
 - **Pulpit pokazuje maksymalnie 5 wierszy na kartę** (`VISIBLE_ROWS`
-  w `signal-card.tsx`), resztę chowa pod „…i jeszcze N". Przy 38 zawodnikach
+  w `signal-card.tsx`, `DASHBOARD_ROWS` po stronie strony — strona tnie listę,
+  żeby nie budować dziesiątek elementów tylko po to, by je odrzucić), resztę
+  chowa pod „…i jeszcze N". **Każda karta pulpitu buduje się na `SignalCard`
+  i `SignalRow`** — także ta ze źródłem zewnętrznym. `SignalRow` ma slot
+  `trailing` na akcję po prawej, `SignalCard` ma `tone`, `headerBadge`
+  i `hideWhenEmpty`; to wystarcza, żeby nie forkować wyglądu karty. Przy 38 zawodnikach
   bez ani jednego przeglądu karta renderowała 38 wierszy i pulpit przestawał
   być sygnałem, a stawał się ścianą tekstu. **Nie zdejmuj tego limitu** —
   pulpit ma mówić „ile i co najpilniejsze", pełna lista jest kliknięcie dalej.

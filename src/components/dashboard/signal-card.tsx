@@ -19,12 +19,21 @@ const VISIBLE_ROWS = 5
 
 type Props = {
   title: string
-  description: string
+  description?: string
   icon: LucideIcon
   to: string
   count: number
   loading?: boolean
-  emptyText: string
+  emptyText?: string
+  /**
+   * Karta znika zamiast pokazywać pustkę. Dla danych ze źródła zewnętrznego:
+   * cudza awaria nie ma zaśmiecać pulpitu komunikatem, na który i tak nie mamy
+   * wpływu. Dla naszych sygnałów zostawiamy `emptyText` — brak alertu to
+   * użyteczna informacja.
+   */
+  hideWhenEmpty?: boolean
+  /** Znacznik przy tytule, np. „źródło zewnętrzne". */
+  headerBadge?: ReactNode
   /**
    * `alert` = coś wymaga reakcji (czerwony licznik).
    * `info` = podgląd horyzontu, nic się nie pali (neutralny licznik).
@@ -49,10 +58,14 @@ export function SignalCard({
   loading = false,
   emptyText,
   tone = 'alert',
+  hideWhenEmpty = false,
+  headerBadge,
   children,
 }: Props) {
   const rows = Children.toArray(children)
   const hidden = rows.length - VISIBLE_ROWS
+
+  if (hideWhenEmpty && !loading && count === 0) return null
 
   return (
     <Card>
@@ -62,13 +75,14 @@ export function SignalCard({
           <Link to={to} className="hover:underline">
             {title}
           </Link>
-          {count > 0 && (
-            <Badge variant={tone === 'alert' ? 'destructive' : 'secondary'} className="ml-auto">
-              {count}
-            </Badge>
-          )}
+          {headerBadge ??
+            (count > 0 && (
+              <Badge variant={tone === 'alert' ? 'destructive' : 'secondary'} className="ml-auto">
+                {count}
+              </Badge>
+            ))}
         </CardTitle>
-        <CardDescription>{description}</CardDescription>
+        {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
 
       <CardContent>
@@ -108,13 +122,16 @@ export function SignalRow({
   badge,
   urgent = false,
   starred = false,
+  trailing,
 }: {
   label: string
   detail: string
-  badge: string
+  badge?: string
   urgent?: boolean
   /** Oznaczenie ważności — ten sam symbol co na liście zawodników. */
   starred?: boolean
+  /** Akcja po prawej zamiast plakietki (np. przycisk „Dodaj u siebie"). */
+  trailing?: ReactNode
 }) {
   return (
     <li className="flex items-center gap-3 py-2.5">
@@ -125,9 +142,11 @@ export function SignalRow({
         </p>
         <p className="text-muted-foreground text-xs">{detail}</p>
       </div>
-      <Badge variant={urgent ? 'destructive' : 'secondary'} className="shrink-0">
-        {badge}
-      </Badge>
+      {trailing ?? (
+        <Badge variant={urgent ? 'destructive' : 'secondary'} className="shrink-0">
+          {badge}
+        </Badge>
+      )}
     </li>
   )
 }

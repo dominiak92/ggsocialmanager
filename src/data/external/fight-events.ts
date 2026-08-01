@@ -10,11 +10,16 @@
  * `Access-Control-Allow-Origin: *`, więc wołamy je wprost z przeglądarki —
  * bez backendu i bez sekretów w bundlu.
  *
- * ZWERYFIKOWANE OGRANICZENIA (stan na wdrożenie):
+ * ZWERYFIKOWANE OGRANICZENIA:
  * - KSW zwraca najbliższą galę poprawnie,
  * - UFC na darmowym poziomie bywa ubogie (potrafi nie mieć nic w przyszłości),
- * - kart walk NIE MA, więc filtr „gdzie walczą Polacy" jest niewykonalny.
+ * - kart walk NIE MA, więc pełnej listy „gdzie walczą Polacy" stąd nie zbudujemy.
  * Widget ma być z tego powodu miłym dodatkiem, nigdy źródłem prawdy.
+ *
+ * PUŁAPKA, która nas już ugryzła: źródło przerzuca galę do `eventspastleague`
+ * JUŻ W DNIU jej rozgrywania. Samo `eventsnextleague` gubi więc dzisiejszą galę
+ * — dokładnie tę, o której najbardziej chce się wiedzieć. Dlatego pytamy oba
+ * endpointy i sami odsiewamy po dacie.
  */
 import type { ExternalFightEvent } from '@/domain/models'
 
@@ -71,8 +76,22 @@ export function toFightEvent(raw: RawEvent, organization: string): ExternalFight
   }
 }
 
-async function fetchLeague(league: { id: string; name: string }): Promise<ExternalFightEvent[]> {
-  const response = await fetch(`${BASE}/eventsnextleague.php?id=${league.id}`, {
+/** Scalenie list z różnych endpointów: bez duplikatów, od najbliższej daty. */
+function mergeFightEvents(lists: ExternalFightEvent[][]): ExternalFightEvent[] {
+  const byId = new Map<string, ExternalFightEvent>()
+  for (const list of lists) {
+    for (const event of list) {
+      if (!byId.has(event.id)) byId.set(event.id, event)
+    }
+  }
+  return [...byId.values()].toSorted((a, b) => a.startsOn.localeCompare(b.startsOn))
+}
+
+async function fetchEndpoint(
+  endpoint: 'eventsnextleague' | 'eventspastleague',
+  league: { id: string; name: string },
+): Promise<ExternalFightEvent[]> {
+  const response = await fetch(`${BASE}/${endpoint}.php?id=${league.id}`, {
     signal: AbortSignal.timeout(TIMEOUT_MS),
   })
   if (!response.ok) return []
@@ -117,14 +136,23 @@ export async function fetchUpcomingFightEvents(): Promise<ExternalFightEvent[]> 
   const cached = readCache()
   if (cached) return cached
 
-  const results = await Promise.allSettled(LEAGUES.map(fetchLeague))
-  const events = results
-    .filter(
-      (result): result is PromiseFulfilledResult<ExternalFightEvent[]> =>
-        result.status === 'fulfilled',
-    )
-    .flatMap((result) => result.value)
-    .toSorted((a, b) => a.startsOn.localeCompare(b.startsOn))
+  /*
+   * Jedna płaska lista zadań zamiast zagnieżdżonych `allSettled`: wszystkie
+   * ligi i oba endpointy lecą równolegle, a scalanie i sortowanie dzieje się
+   * dokładnie raz. `past` jest potrzebny WYŁĄCZNIE po to, żeby złapać galę
+   * rozgrywaną dzisiaj — źródło przenosi ją tam już rano. Prawdziwą przeszłość
+   * odsiewa hook, porównując datę z dzisiejszą.
+   */
+  const results = await Promise.allSettled(
+    LEAGUES.flatMap((league) => [
+      fetchEndpoint('eventsnextleague', league),
+      fetchEndpoint('eventspastleague', league),
+    ]),
+  )
+
+  const events = mergeFightEvents(
+    results.map((result) => (result.status === 'fulfilled' ? result.value : [])),
+  )
 
   writeCache(events)
   return events

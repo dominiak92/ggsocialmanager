@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { groupByDay } from '@/domain/calendar'
 import { postTypeColorClass } from '@/domain/enums'
 import type { Channel, PostType, Publication } from '@/domain/models'
@@ -22,9 +23,15 @@ const WEEKDAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd']
  * rodzajów postów i skróty kanałów. Szczegóły są w panelu dnia.
  */
 export function MonthGrid({ month, days, channels, postTypes, publications, onOpenDay }: Props) {
-  const byDay = groupByDay(publications)
-  const typeById = new Map(postTypes.map((postType) => [postType.id, postType]))
-  const channelById = new Map(channels.map((channel) => [channel.id, channel]))
+  const byDay = useMemo(() => groupByDay(publications), [publications])
+  const typeById = useMemo(
+    () => new Map(postTypes.map((postType) => [postType.id, postType])),
+    [postTypes],
+  )
+  const channelById = useMemo(
+    () => new Map(channels.map((channel) => [channel.id, channel])),
+    [channels],
+  )
 
   return (
     <div className="overflow-hidden rounded-lg border">

@@ -64,6 +64,14 @@ export type EventPromo = {
   promoCount: number
   /** Na ilu różnych kanałach był nagłaśniany. */
   channelCount: number
+  /**
+   * Czy event wszedł już w swoje okno zapowiedzi (`promoLeadDays`).
+   *
+   * Pole, a nie predykat liczony w UI: to reguła domenowa i musi mieć jedno
+   * miejsce. Wcześniej pulpit liczył ją sobie sam i cicho rozjechałby się
+   * z `eventsNeedingPromo` przy zmianie definicji okna.
+   */
+  inPromoWindow: boolean
 }
 
 /** Pokrycie nagłośnienia dla wszystkich eventów — także tych zaopiekowanych. */
@@ -72,14 +80,26 @@ export function eventPromo(
   publications: Publication[],
   today: Date,
 ): EventPromo[] {
+  // Jeden przebieg po publikacjach zamiast `filter` w pętli po eventach:
+  // inaczej koszt rośnie jak liczba eventów razy liczba publikacji.
+  const byEvent = new Map<string, Publication[]>()
+  for (const publication of publications) {
+    if (!publication.eventId) continue
+    const bucket = byEvent.get(publication.eventId)
+    if (bucket) bucket.push(publication)
+    else byEvent.set(publication.eventId, [publication])
+  }
+
   return events.map((event) => {
-    const linked = publications.filter((publication) => publication.eventId === event.id)
+    const linked = byEvent.get(event.id) ?? []
+    const daysUntil = daysBetween(today, fromDateKey(event.startsOn))
 
     return {
       event,
-      daysUntil: daysBetween(today, fromDateKey(event.startsOn)),
+      daysUntil,
       promoCount: linked.length,
       channelCount: new Set(linked.map((publication) => publication.channelId)).size,
+      inPromoWindow: daysUntil >= 0 && daysUntil <= event.promoLeadDays,
     }
   })
 }
@@ -97,12 +117,7 @@ export function eventsNeedingPromo(
   today: Date,
 ): EventPromo[] {
   return eventPromo(events, publications, today)
-    .filter(
-      (entry) =>
-        entry.promoCount === 0 &&
-        entry.daysUntil >= 0 &&
-        entry.daysUntil <= entry.event.promoLeadDays,
-    )
+    .filter((entry) => entry.promoCount === 0 && entry.inPromoWindow)
     .toSorted((a, b) => a.daysUntil - b.daysUntil)
 }
 

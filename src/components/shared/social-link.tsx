@@ -52,6 +52,7 @@ export function SocialLink({ kind, url, label }: Props) {
       target="_blank"
       rel="noreferrer noopener"
       onClick={(event) => event.stopPropagation()}
+      data-touch="icon"
       aria-label={`${name}: ${label}`}
       title={`${name}: ${label}`}
       className={cn(

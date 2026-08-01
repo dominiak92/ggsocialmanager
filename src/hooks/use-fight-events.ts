@@ -4,21 +4,17 @@ import { fetchUpcomingFightEvents } from '@/data/external/fight-events'
 import type { ExternalFightEvent } from '@/domain/models'
 import { toDateKey } from '@/lib/dates'
 
-type State = {
-  events: ExternalFightEvent[]
-  loading: boolean
-}
-
 /**
  * Nadchodzące gale ze źródła zewnętrznego.
  *
- * Celowo NIE wystawia błędu: to dodatek, nie funkcja krytyczna. Gdy cudzy
- * serwer padnie, karta ma po prostu zniknąć z pulpitu, a nie straszyć
- * właściciela komunikatem o awarii, na którą nie ma wpływu.
+ * Zwraca samą listę — bez `loading` i bez błędu. To dodatek, nie funkcja
+ * krytyczna: dopóki nic nie przyszło, lista jest pusta, a karta i tak się
+ * nie renderuje (`hideWhenEmpty`). Osobny stan ładowania niczego by tu nie
+ * zmienił, a awaria cudzego serwera nie ma straszyć właściciela komunikatem,
+ * na który nie ma wpływu.
  */
-export function useFightEvents(): State {
+export function useFightEvents(): ExternalFightEvent[] {
   const [events, setEvents] = useState<ExternalFightEvent[]>([])
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let active = true
@@ -26,16 +22,12 @@ export function useFightEvents(): State {
 
     fetchUpcomingFightEvents()
       .then((all) => {
-        if (!active) return
-        // Źródło potrafi zwrócić galę z dzisiejszą albo wczorajszą datą —
-        // „nadchodzące" ma znaczyć nadchodzące.
-        setEvents(all.filter((event) => event.startsOn >= today))
+        // Źródło przerzuca galę do „minionych" już w dniu jej rozgrywania,
+        // więc pytamy oba endpointy i odsiewamy datą tutaj.
+        if (active) setEvents(all.filter((event) => event.startsOn >= today))
       })
       .catch(() => {
-        if (active) setEvents([])
-      })
-      .finally(() => {
-        if (active) setLoading(false)
+        // Brak danych = brak karty. Nic do zrobienia.
       })
 
     return () => {
@@ -43,5 +35,5 @@ export function useFightEvents(): State {
     }
   }, [])
 
-  return { events, loading }
+  return events
 }

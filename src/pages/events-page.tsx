@@ -64,13 +64,13 @@ export function EventsPage() {
   const today = useMemo(() => new Date(), [])
   const promo = useMemo(() => eventPromo(items, linked, today), [items, linked, today])
 
-  const upcomingCount = promo.filter((entry) => entry.daysUntil >= 0).length
-
   /**
    * Domyślnie tylko nadchodzące. Lista jest posortowana rosnąco po dacie, więc
    * bez tego filtra minione wydarzenia z czasem urosłyby na SZCZYCIE ekranu
    * i trzeba by je przewijać, żeby dojść do tego, co dopiero będzie.
    */
+  const upcomingCount = useMemo(() => promo.filter((entry) => entry.daysUntil >= 0).length, [promo])
+
   const visible = useMemo(() => {
     if (range === 'all') return promo
     if (range === 'past') return promo.filter((entry) => entry.daysUntil < 0).toReversed()

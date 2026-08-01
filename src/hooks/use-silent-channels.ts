@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { dataProvider } from '@/data/provider'
 import type { Channel } from '@/domain/models'
@@ -42,9 +42,12 @@ export function useSilentChannels(channels: Channel[]): State {
     }
   }, [])
 
-  return {
-    silent: lastPublished ? silentChannels(channels, lastPublished, new Date()) : [],
-    error,
-    loading: lastPublished === null && error === null,
-  }
+  // Bez memo pełny filtr + sort po kanałach leciał przy KAŻDYM renderze
+  // pulpitu, a ten renderuje się kilka razy, gdy dochodzą kolejne zapytania.
+  const silent = useMemo(
+    () => (lastPublished ? silentChannels(channels, lastPublished, new Date()) : []),
+    [channels, lastPublished],
+  )
+
+  return { silent, error, loading: lastPublished === null && error === null }
 }

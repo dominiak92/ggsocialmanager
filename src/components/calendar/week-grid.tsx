@@ -1,5 +1,5 @@
 import { CheckIcon, PlusIcon } from 'lucide-react'
-import { Fragment } from 'react'
+import { Fragment, useMemo } from 'react'
 
 import { cellKey, groupByCell, sectionsOf } from '@/domain/calendar'
 import { CHANNEL_GROUP_LABEL, postTypeColorClass } from '@/domain/enums'
@@ -47,9 +47,14 @@ export function WeekGrid({
   onOpen,
   onOpenDay,
 }: Props) {
-  const byCell = groupByCell(publications)
-  const typeById = new Map(postTypes.map((postType) => [postType.id, postType]))
-  const sections = sectionsOf(channels)
+  // Indeksy budowane raz na zmianę danych, a nie na każdy render: siatka
+  // re-renderuje się przy otwarciu dialogu, panelu dnia i każdej zmianie filtra.
+  const byCell = useMemo(() => groupByCell(publications), [publications])
+  const typeById = useMemo(
+    () => new Map(postTypes.map((postType) => [postType.id, postType])),
+    [postTypes],
+  )
+  const sections = useMemo(() => sectionsOf(channels), [channels])
 
   if (sections.length === 0) {
     return (
@@ -64,9 +69,12 @@ export function WeekGrid({
       {/* `table-fixed` + jawne szerokości kolumn — bez tego przeglądarka
           rozciąga kolumny pod najdłuższy tytuł i szerokość dnia zmienia się
           przy każdym dodaniu wpisu. */}
-      <table className="w-full min-w-[56rem] table-fixed border-separate border-spacing-0">
+      <table className="w-full min-w-[44rem] table-fixed border-separate border-spacing-0 sm:min-w-[56rem]">
+        {/* Kolumna kanałów jest wąska na telefonie: przy 176 px na ekranie
+            360 px zostawałoby ~26 px na dzień, czyli kratki nie do trafienia.
+            Nazwy i tak są ucinane, a pełną widać w panelu dnia. */}
         <colgroup>
-          <col className="w-44" />
+          <col className="w-24 sm:w-44" />
           {days.map((day) => (
             <col key={toDateKey(day)} />
           ))}
@@ -187,9 +195,12 @@ export function WeekGrid({
                               className={cn(
                                 'text-muted-foreground/50 hover:bg-accent hover:text-foreground flex shrink-0 items-center justify-center rounded border border-dashed transition',
                                 'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
-                                // Pierwszy wpis wypełnia wolne miejsce, kolejne
+                                // Pierwszy wpis wypełnia wolne miejsce (~52 px,
+                                // czyli i tak wygodny cel dotykowy), kolejne
                                 // dodawanie to już tylko wąski pasek — dzięki
                                 // temu wysokość komórki jest zawsze ta sama.
+                                // Dlatego NIE dajemy tu `data-touch`: wymuszone
+                                // 40 px rozepchnęłoby komórkę.
                                 visible.length === 0 ? 'flex-1' : 'h-5',
                                 // Na myszy plus pojawia się przy najechaniu —
                                 // 112 plusów naraz robi z siatki szum. Na dotyku

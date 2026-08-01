@@ -189,6 +189,24 @@
   [role='menuitem'] {
     min-height: 44px;
   }
+
+  /* Przyciski ikonowe mają na myszy 24–32 px — na palcu za mało. Celujemy
+     w to, co komponent `Button` i tak o sobie mówi (`data-slot` + `data-size`),
+     zamiast wymagać dodatkowego atrybutu przy każdym użyciu: nowy przycisk
+     ikonowy dostaje wygodny cel automatycznie, bez pamiętania o niczym.
+
+     Świadomie NIE używamy sztuczki z powiększoną strefą `::after` — przy
+     ikonach stojących obok siebie (Instagram i Facebook dzieli 2 px)
+     nakładające się strefy kradłyby sobie kliknięcia.
+
+     Wyjątek: elementy, których rozmiar wynika z układu (np. „+" w kratce
+     kalendarza o stałej wysokości) NIE są przyciskami ikonowymi w tym
+     sensie i wymuszone 40 px rozepchnęłoby im rodzica. */
+  [data-slot='button'][data-size^='icon'],
+  a[data-touch='icon'] {
+    min-width: 40px;
+    min-height: 40px;
+  }
 }
 
 /* Poziome paski wyboru zamiast zawijania — używane z `overflow-x-auto`. */

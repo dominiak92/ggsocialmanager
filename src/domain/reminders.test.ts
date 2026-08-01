@@ -390,3 +390,34 @@ describe('upcomingEvents', () => {
     expect(result[0]?.channelCount).toBe(2)
   })
 })
+
+describe('eventPromo — okno zapowiedzi', () => {
+  it('oznacza event wewnątrz okna', () => {
+    // 8 dni do startu przy oknie 14 — jesteśmy w środku.
+    const [entry] = eventPromo([sportEvent({ promoLeadDays: 14 })], [], today)
+
+    expect(entry?.inPromoWindow).toBe(true)
+  })
+
+  it('nie oznacza eventu jeszcze poza oknem', () => {
+    const [entry] = eventPromo(
+      [sportEvent({ startsOn: '2026-10-19', promoLeadDays: 14 })],
+      [],
+      today,
+    )
+
+    expect(entry?.inPromoWindow).toBe(false)
+  })
+
+  it('nie oznacza eventu, który już się zaczął', () => {
+    const [entry] = eventPromo([sportEvent({ startsOn: '2026-08-10' })], [], today)
+
+    expect(entry?.inPromoWindow).toBe(false)
+  })
+
+  it('ignoruje publikacje bez powiązania z eventem', () => {
+    const [entry] = eventPromo([sportEvent()], [pub({ eventId: null })], today)
+
+    expect(entry?.promoCount).toBe(0)
+  })
+})
